@@ -600,5 +600,42 @@
 
 (equal? sample-tree test-tree)
 ;; #t
-
 (encode '(A D A B B C A) test-tree)
+
+;; Exercise 2.70.
+
+(define fifties-tree (generate-huffman-tree
+                      '((A 2) (BOOM 1) (GET 2) (JOB 2)
+                        (NA 16) (SHA 3) (YIP 9) (WAH 1))))
+
+(define song
+  '(GET A JOB
+         SHA NA NA NA NA NA NA NA NA
+         GET A JOB
+         SHA NA NA NA NA NA NA NA NA
+         WAH YIP YIP YIP YIP YIP YIP YIP YIP YIP
+         SHA BOOM))
+
+(define song-encoded
+  (encode song fifties-tree))
+
+(length song-encoded)
+;; 84
+
+;; 3 bit to encode 8 symbols
+(* 3 (length song))
+;; 108
+
+;; Exercise 2.71
+
+(define n5 '((A 1) (B 2) (C 4) (D 8) (E 16)))
+(define n10 '((A 1) (B 2) (C 4) (D 8) (E 16)
+              (F 32) (G 64) (H 128) (I 256) (J 512)))
+
+(generate-huffman-tree n5)
+(generate-huffman-tree n10)
+;; most frequent: 1 bit, least-frequent: n-1
+
+;; Exercise 2.72.
+
+;; n * (2n-1) || n * (n+1) ~= n^2
