@@ -178,7 +178,6 @@
 
 (define (queens board-size)
   (define (queen-cols k)  
-     (write-string "Llamada: " ) (writenl k)
     (if (= k 0)
         (list empty-board)
         (filter
@@ -186,9 +185,7 @@
             (safe? k positions))
          (flatmap
           (lambda (rest-of-queens)
-            (write 'queens) (writenl rest-of-queens)
             (map (lambda (new-row)
-                   (write 'new-row:) (writenl new-row)
                    (adjoin-position new-row k rest-of-queens))
                  (enumerate-interval 1 board-size)))
           (queen-cols (- k 1))))))
@@ -229,7 +226,6 @@
 
 (define (queens2 board-size)
   (define (queen-cols k)  
-    (write-string "Llamada: ") (writenl k)
     (if (= k 0)
         (list empty-board)
         (filter
@@ -237,13 +233,10 @@
            (safe? k positions))
          (flatmap
           (lambda (new-row)
-            (write 'new-row:) (writenl new-row)
             (map (lambda (rest-of-queens)
-                   (write 'queens) (writenl rest-of-queens)
                    (adjoin-position new-row k rest-of-queens))
                  (queen-cols (- k 1))))
           (enumerate-interval 1 board-size)))))
-  (write-string "Llamada: " ) (writenl board-size)
   (queen-cols board-size))
 
 ; the second version do one recursive call for each interval step
