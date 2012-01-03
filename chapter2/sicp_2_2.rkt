@@ -248,20 +248,24 @@
 ;; instances of a general splitting operation. Define a procedure
 ;; split with the property that evaluating
 
-(define right-split (split beside below))
-(define up-split (split below beside))
+;;(define right-split (split beside below))
+;;(define up-split (split below beside))
 
 ;; produces procedures right-split and up-split with the same
 ;; behaviors as the ones already defined.
 
 
 (define (split fst snd)
-  (define splitter (painter n)
+  (define (splitter painter n)
    (if (= n 0)
        painter
        (let ((smaller (splitter painter (- n 1))))
          (fst painter (snd smaller smaller)))))
   splitter)
+(define beside null)
+(define below null)
+(define right-split (split beside below))
+(define up-split (split below beside))
 
 ;; Exercise 2.46.
 
@@ -298,6 +302,7 @@
 ;; Exercise 2.49
 
 ;;a
+
 (define (outline-segments corners) 
   (let* ((vectors-orig
           (map (curry apply make-vect) corners))
@@ -307,13 +312,15 @@
     (map make-segment
          vectors-orig vectors-dest)))
 
+(define (segment->painter segment) null)
+
 (define outline
   (segment->painter
    (outline-segments '((0 0) (0 1) (1 1) (1 0)))))
 
 ;;b
 (define x-segments
-  (map make-segments
+  (map make-segment
        (list (make-vector 0 0)
              (make-vector 0 1))
        (list (make-vector 1 1)

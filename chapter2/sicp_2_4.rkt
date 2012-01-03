@@ -171,7 +171,10 @@
     (set! table (cons (cons op new) rest)) table))
 
 (define (get op type)
-  (cadr (assoc type (cdr (assoc op table)))))
+  (let* ((types-procs (assoc op table))
+         (type-proc (when types-procs
+                      (assoc type (cdr types-procs)))))
+    (and type-proc (cadr type-proc))))
 
 ;; Exercise 2.73.
 
@@ -182,7 +185,7 @@
                                             var))))
 (define (operator exp) (car exp))
 (define (operands exp) (cdr exp))
-(define (variable? x) (symbol? x))
+(define variable?  symbol?)
 (define (same-variable? v1 v2)
   (and (variable? v1) (variable? v2) (eq? v1 v2)))
 
@@ -274,8 +277,8 @@
 ;;a
 (define (get-record name file)
   (let ((record (get 'get-record
-                     (type-tag file) name (contents file)))))
-  (when record (attach-tag (type-tag file) record)))
+                     (type-tag file) name (contents file))))
+    (when record (attach-tag (type-tag file) record))))
 ;; Each file has to be annotated with the id of the division
 ;; (attach-tag 'spain file)
  ;;b
@@ -288,8 +291,8 @@
 
 ;;d
 (define (install-new-file tag)
-  (define (get-record name file))
-  (define (get-salary employee))
+  (define (get-record name file) null)
+  (define (get-salary employee) null)
   (put 'get-record tag get-record)
   (put 'get-salary tag get-salary))
 
@@ -316,7 +319,8 @@
       ((imag-part) (* r (sin a)))
       ((magnitude) r)
       ((angle) a)
-      (else (error "Unknown op -- MAKE-FROM-MAG-ANG" op)))))
+      (else (error "Unknown op -- MAKE-FROM-MAG-ANG" op))))
+  dispatch)
 
 ;; Exercise 2.76.
 ;; explicit: change impl of original procedures to add new cases

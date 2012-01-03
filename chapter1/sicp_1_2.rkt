@@ -8,18 +8,18 @@
 (define (recursive-factorial n)
   (if (= n 1)
       1
-      (* n (factorial (- n 1)))))
+      (* n ((recursive-factorial (- n 1))))))
 
 ;; linear iterative
-(define (iterative-factorial n)
-  (fact-iter 1 1 n))
-
 (define (fact-iter product counter max-count)
   (if (> counter max-count)
       product
       (fact-iter (* counter product)
                  (+ counter 1)
                  max-count)))
+
+(define (iterative-factorial n)
+  (fact-iter 1 1 n))
 
 ;;Exercise 1.9
 (define (dec x) (- x 1))
@@ -270,7 +270,7 @@
 (define (f-expt-i b n a) 
   (cond ((= n 0) a)
         ((even? n) (f-expt-i (* b b) (/ n 2) a))
-        (else (f-expt-i b (- n 1) (* b a)))))       
+        (else (f-expt-i b (- n 1) (* b a)))))
 
 ;;Exercise 1.17
 
@@ -306,8 +306,8 @@
         ((even? count)
          (fib-iter a
                    b
-                   <??>      ; compute p'
-                   <??>      ; compute q'
+                   ; <??>      compute p'
+                   ;<??>        compute q'
                    (/ count 2)))
         (else (fib-iter (+ (* b q) (* a q) (* a p))
                         (+ (* b p) (* a q))
@@ -415,7 +415,7 @@
   (andmap (lambda (x) (= x (expmod x n n)))
           (build-list (- n 1) (lambda (x) (+ x 1)))))
 
-(andmap carmichael? '(561 1105 1729 2465 2821 6601))
+;(andmap carmichael? '(561 1105 1729 2465 2821 6601))
 
 ;; Exercise 1.28
 
@@ -448,6 +448,7 @@
   (define (add-dx x) (+ x dx))
   (* (sum f (+ a (/ dx 2.0)) add-dx b)
      dx))
+
 (define (cube x) (* x x x))
 
 (integral cube 0 1 0.01)
