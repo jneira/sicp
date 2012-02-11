@@ -255,7 +255,7 @@
 ;;   (make-complex-from-real-imag 2 2))
  
 ;; b)
-
+x
 (put-coercion 'complex 'complex #f)
 (put-coercion 'scheme-number 'scheme-number #f)
 
@@ -263,27 +263,52 @@
 
 ;; c)
 
+(define (apply-coercion op args)
+  (let ((type-tags (map type-tag args)))
+   (if (and (= (length args) 2)
+            (not (apply equal? type-tags)))
+       (let* ((type1 (car type-tags))
+              (type2 (cadr type-tags))
+              (t1->t2 (get-coercion type1 type2))
+              (t2->t1 (get-coercion type2 type1))
+              (a1 (car args))
+              (a2 (cadr args)))
+         (cond (t1->t2
+                (apply-generic op (t1->t2 a1) a2))
+               (t2->t1
+                (apply-generic op a1 (t2->t1 a2)))
+               (else
+                (error "No method for these types"
+                       (list op type-tags)))))
+       (error "No method for these types"
+              (list op type-tags)))))
+
 (define (apply-generic op . args)
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
     (if proc
         (apply proc (map contents args))
-        (if (and (= (length args) 2)
-                 (not (apply equal? args)))
-            (let* ((type1 (car type-tags))
-                   (type2 (cadr type-tags))
-                   (t1->t2 (get-coercion type1 type2))
-                   (t2->t1 (get-coercion type2 type1))
-                   (a1 (car args))
-                   (a2 (cadr args)))
-              (cond (t1->t2
-                     (apply-generic op (t1->t2 a1) a2))
-                    (t2->t1
-                     (apply-generic op a1 (t2->t1 a2)))
-                    (else
-                     (error "No method for these types"
-                            (list op type-tags)))))
-            (error "No method for these types"
-                   (list op type-tags))))))
+        (let ((coercions (get-coercions op args)))
+          (if (not (empty? coercions))
+              (map (curry apply-generic op) coercions)
+              (error "No method for these types"
+                       (list op type-tags)))))))
 
 ;; Exercise 2.82
+
+(define (get-coercions op args)
+  (define type-tags (map type-tag args))
+  (define (coerce arg to-type)
+    (if (equal? (type-tag arg) to-type) arg
+        (let ((coercion-op
+               (get-coercion (type-tag arg) to-type))) 
+          (and coercion-op (coercion-op arg)))))
+  (define (acc-coercions next-type acc)
+    (let ((coerced-args
+           (map (lambda (arg)(coerce arg next-type)) args)))
+      (if (member false coerced-args) acc
+          (cons coerced-args acc))))
+  (if (not (apply equal? type-tags))
+      (foldl acc-coercions '() type-tags)
+      (error "No method for these types"
+             (list op type-tags))))
