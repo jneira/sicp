@@ -18,7 +18,7 @@
        (lambda (x y) (tag (* x y))))
   (put 'div '(scheme-number scheme-number)
        (lambda (x y) (tag (/ x y))))
-  (put 'make 'scheme-number
+  (put 'make '(scheme-number)
        (lambda (x) (tag x)))
   'done)
 
@@ -44,8 +44,8 @@
     (make-rat (* (numer x) (numer y))
               (* (denom x) (denom y))))
   (define (div-rat x y)
-    (make-rat (* (numer x) (denom y))
-              (* (denom x) (numer y))))
+    (make-rat (/ (numer x) (denom y))
+              (/ (denom x) (numer y))))
   ;; interface to rest of the system
   (define (tag x) (attach-tag 'rational x))
   (put 'add '(rational rational)
@@ -56,11 +56,12 @@
        (lambda (x y) (tag (mul-rat x y))))
   (put 'div '(rational rational)
        (lambda (x y) (tag (div-rat x y))))
-  (put 'make 'rational
+  (put 'make '(rational)
        (lambda (n d) (tag (make-rat n d))))
-  (define (make-rational n d)
-    ((get 'make 'rational) n d))
   'done)
+
+(define (make-rational n d)
+  ((get 'make 'rational) n d))
 
 (define (install-complex-package)
   ;; imported procedures from rectangular and polar packages
@@ -141,11 +142,6 @@
 ;; (add 1 2)
 ;; Bad tagged datum -- TYPE-TAG 1
 
-(define (attach-tag type-tag contents)
-  (if (number? contents)
-      contents
-      (cons type-tag contents)))
-
 (define (type-tag datum)
   (cond
    ((pair? datum) (car datum))
@@ -187,13 +183,13 @@
 (define (=zero? x) (apply-generic '=zero? x))
 
 (define (install-zero-predicate-package)
-  (put '=zero? 'complex
+  (put '=zero? '(complex)
        (lambda (x) (= 0 (magnitude x))))
   (define (numer x) (car x))
   (define (denom x) (cdr x))
-  (put '=zero? 'rational
+  (put '=zero? '(rational)
        (lambda (x) (= 0 (numer x))))
-  (put '=zero? 'scheme-number (curry = 0))
+  (put '=zero? '(scheme-number) (curry = 0))
   'done)
 
 (install-zero-predicate-package)
@@ -255,7 +251,7 @@
 ;;   (make-complex-from-real-imag 2 2))
  
 ;; b)
-x
+
 (put-coercion 'complex 'complex #f)
 (put-coercion 'scheme-number 'scheme-number #f)
 
@@ -288,15 +284,15 @@ x
          (proc (get op type-tags)))
     (if proc
         (apply proc (map contents args))
-        (let ((coercions (get-coercions op args)))
+        (let ((coercions (get-coercions args)))
           (if (not (empty? coercions))
-              (map (curry apply-generic op) coercions)
+              (apply apply-generic op (car coercions))
               (error "No method for these types"
-                       (list op type-tags)))))))
+                     (list op type-tags)))))))
 
 ;; Exercise 2.82
 
-(define (get-coercions op args)
+(define (get-coercions args)
   (define type-tags (map type-tag args))
   (define (coerce arg to-type)
     (if (equal? (type-tag arg) to-type) arg
@@ -305,10 +301,106 @@ x
           (and coercion-op (coercion-op arg)))))
   (define (acc-coercions next-type acc)
     (let ((coerced-args
-           (map (lambda (arg)(coerce arg next-type)) args)))
+           (map (lambda (arg) 
+                   (coerce arg next-type)) args)))
       (if (member false coerced-args) acc
           (cons coerced-args acc))))
-  (if (not (apply equal? type-tags))
+  (if (and (> (length args) 1)
+           (not (apply equal? type-tags)))
       (foldl acc-coercions '() type-tags)
-      (error "No method for these types"
-             (list op type-tags))))
+     '()))
+
+;; Exercise 2.83
+
+(define (install-raise-operator)
+  (put 'raise '(integer)          
+       (lambda (i)
+         (make-rational i 1)))
+  (put 'raise '(rational)
+       (lambda (r) (attach-tag
+               'real-number
+               (/ (car r) (cdr r) 1.0))))
+  (put 'raise '(real-number)
+       (lambda (r) (make-complex-from-real-imag 
+               r 0)))
+  'done)
+
+(install-raise-operator)
+(define (raise x) (apply-generic 'raise x))
+
+;; Exercise 2.84
+
+(define (get-coercion from-type to-type)
+  (if (is-a? from-type to-type)
+      raise
+      (get 'coercion (list from-type to-type))))
+
+(define (is-a? from-type to-type)
+  (let ((ps (parents from-type)))
+    (and ps
+         (or (member to-type ps)
+             (ormap (lambda (f) (is-a? f to-type)) ps)))))
+
+(define (parents type)
+  (get 'parents type))
+
+(define (derive parent child)
+  (put 'parents child
+       (cons parent (or (parents child) '()))))
+
+(define (install-numerical-tower)
+  (derive 'rational 'integer)
+  (derive 'real-number 'rational)
+  (derive 'complex 'real-number)
+  'done)
+
+(define (install-integer-package)
+  (define self '(integer integer))
+  (define (tag x) (attach-tag 'integer x) )
+  (define sn '(scheme-number scheme-number))
+  (define (trans op)
+    (compose tag contents (get op sn)))
+  (put 'add self (trans 'add))
+  (put 'sub self (trans 'sub))
+  (put 'mul self (trans 'mul))
+  (put 'div self (trans 'div))
+  'done)
+
+
+(define (install-real-package)
+  (define self '(real-number real-number))
+  (define (tag x) (attach-tag 'real-number x) )
+  (define sn '(scheme-number scheme-number))
+  (define (trans op)
+    (compose tag contents (get op sn)))
+  (put 'add self (trans 'add))
+  (put 'sub self (trans 'sub))
+  (put 'mul self (trans 'mul))
+  (put 'div self (trans 'div))
+  'done)
+
+(install-numerical-tower)
+(install-integer-package)
+(install-real-package)
+
+(define one (attach-tag 'integer 1))
+(define two (attach-tag 'integer 2))
+
+(raise one)
+;; (rational 1 . 1)
+(raise (raise one))
+;; (real-number . 1.0)
+(raise (raise (raise one)))
+;; (complex rectangular 1.0 . 0)
+
+(add one one)
+;; (integer . 2)
+(add one (raise one))
+;; (rational 2 . 1)
+(add (raise (raise one)) one)
+;; (real-number . 2.0)
+(add (raise (raise (raise one))) one)
+;; (complex rectangular 2.0 . 0)
+
+;; Exercise 2.85
+

@@ -172,7 +172,7 @@
 
 (define (get op type)
   (let* ((types-procs (assoc op table))
-         (type-proc (when types-procs
+         (type-proc (and types-procs
                       (assoc type (cdr types-procs)))))
     (and type-proc (cadr type-proc))))
 
