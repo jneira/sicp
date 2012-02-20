@@ -364,6 +364,8 @@
   (put 'sub self (trans 'sub))
   (put 'mul self (trans 'mul))
   (put 'div self (trans 'div))
+  (put 'equ? self (get 'equ? sn))
+  (put '=zero? self (get '=zero? (car sn)))
   'done)
 
 
@@ -377,6 +379,8 @@
   (put 'sub self (trans 'sub))
   (put 'mul self (trans 'mul))
   (put 'div self (trans 'div))
+  (put 'equ? self (get 'equ? sn))
+  (put '=zero? self (get '=zero? (car sn)))
   'done)
 
 (install-numerical-tower)
@@ -403,4 +407,9 @@
 ;; (complex rectangular 2.0 . 0)
 
 ;; Exercise 2.85
+(equ? one one)
+;; t
+(equ? one (raise one))
+;; t
 
+(define (install-project-package))
