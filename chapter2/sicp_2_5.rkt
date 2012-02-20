@@ -259,7 +259,7 @@
 
 ;; c)
 
-(define (apply-coercion op args)
+(define (apply-generic op args)
   (let ((type-tags (map type-tag args)))
    (if (and (= (length args) 2)
             (not (apply equal? type-tags)))
