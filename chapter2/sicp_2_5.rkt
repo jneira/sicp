@@ -1,5 +1,7 @@
 ;; 2.5  Systems with Generic Operations
 
+(define (prn s) (write s) (newline))
+
 ;; 2.5.1  Generic Arithmetic Operations
 
 (define (add x y) (apply-generic 'add x y))
@@ -18,12 +20,11 @@
        (lambda (x y) (tag (* x y))))
   (put 'div '(scheme-number scheme-number)
        (lambda (x y) (tag (/ x y))))
-  (put 'make '(scheme-number)
-       (lambda (x) (tag x)))
+  (put 'make '(scheme-number) tag)
   'done)
 
 (define (make-scheme-number n)
-  ((get 'make 'scheme-number) n))
+  ((get 'make '(scheme-number)) n))
 
 (define (install-rational-package)
   ;; internal procedures
@@ -61,7 +62,7 @@
   'done)
 
 (define (make-rational n d)
-  ((get 'make 'rational) n d))
+  ((get 'make '(rational)) n d))
 
 (define (install-complex-package)
   ;; imported procedures from rectangular and polar packages
@@ -159,8 +160,6 @@
 
 ;; Exercise 2.79.
 
-(define (equ? x y) (apply-generic 'equ? x y))
-
 (define (install-number-equality-package)
   (put 'equ? '(complex complex)
        (lambda (i j) (and (= (real-part i) (real-part j))
@@ -177,6 +176,7 @@
   'done)
 
 (install-number-equality-package)
+(define (equ? x y) (apply-generic 'equ? x y))
 
 ;; Exercise 2.80
 
@@ -279,80 +279,41 @@
        (error "No method for these types"
               (list op type-tags)))))
 
+;; Exercise 2.82
+
 (define (apply-generic op . args)
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
     (if proc
         (apply proc (map contents args))
-        (let ((coercions (get-coercions args)))
-          (if (not (empty? coercions))
-              (apply apply-generic op (car coercions))
+        (let ((casts (get-casts args)))
+          (if (not (empty? casts))
+              (apply apply-generic op (car casts))
               (error "No method for these types"
                      (list op type-tags)))))))
 
-;; Exercise 2.82
+(define casting get-coercion)
 
-(define (get-coercions args)
+(define (get-casts args)
   (define type-tags (map type-tag args))
-  (define (coerce arg to-type)
+  (define (cast arg to-type)
     (if (equal? (type-tag arg) to-type) arg
-        (let ((coercion-op
-               (get-coercion (type-tag arg) to-type))) 
-          (and coercion-op (coercion-op arg)))))
-  (define (acc-coercions next-type acc)
-    (let ((coerced-args
+        (let ((casting-op
+               (casting (type-tag arg) to-type))) 
+          (and casting-op (casting-op arg)))))
+  (define (acc-casts next-type acc)
+    (let ((casted-args
            (map (lambda (arg) 
-                   (coerce arg next-type)) args)))
-      (if (member false coerced-args) acc
-          (cons coerced-args acc))))
+                   (cast arg next-type)) args)))
+      (if (member false casted-args) acc
+          (cons casted-args acc))))
   (if (and (> (length args) 1)
            (not (apply equal? type-tags)))
-      (foldl acc-coercions '() type-tags)
+      (foldl acc-casts '() type-tags)
      '()))
 
+
 ;; Exercise 2.83
-
-(define (install-raise-operator)
-  (put 'raise '(integer)          
-       (lambda (i)
-         (make-rational i 1)))
-  (put 'raise '(rational)
-       (lambda (r) (attach-tag
-               'real-number
-               (/ (car r) (cdr r) 1.0))))
-  (put 'raise '(real-number)
-       (lambda (r) (make-complex-from-real-imag 
-               r 0)))
-  'done)
-
-(install-raise-operator)
-(define (raise x) (apply-generic 'raise x))
-
-;; Exercise 2.84
-
-(define (get-coercion from-type to-type)
-  (if (is-a? from-type to-type)
-      raise
-      (get 'coercion (list from-type to-type))))
-
-(define (is-a? from-type to-type)
-  (let ((ps (parents from-type)))
-    (and ps
-         (or (member to-type ps)
-             (ormap (lambda (f) (is-a? f to-type)) ps)))))
-
-(define (parents type)
-  (get 'parents type))
-
-(define (derive parent child)
-  (put 'parents child
-       (cons parent (or (parents child) '()))))
-
-(define (install-numerical-tower)
-  (derive 'rational 'integer)
-  (derive 'real-number 'rational)
-  (derive 'complex 'real-number)
-  'done)
 
 (define (install-integer-package)
   (define self '(integer integer))
@@ -368,7 +329,6 @@
   (put '=zero? self (get '=zero? (car sn)))
   'done)
 
-
 (define (install-real-package)
   (define self '(real-number real-number))
   (define (tag x) (attach-tag 'real-number x) )
@@ -383,12 +343,28 @@
   (put '=zero? self (get '=zero? (car sn)))
   'done)
 
-(install-numerical-tower)
 (install-integer-package)
 (install-real-package)
 
-(define one (attach-tag 'integer 1))
-(define two (attach-tag 'integer 2))
+(define (make-real r) (attach-tag 'real-number r))
+(define (make-integer i) (attach-tag 'integer i))
+
+(define (install-raise-operator)
+  (put 'raise '(integer)          
+       (lambda (i) (make-rational i 1)))
+  (put 'raise '(rational)
+       (lambda (r) (make-real
+               (/ (car r) (cdr r) 1.0))))
+  (put 'raise '(real-number)
+       (lambda (r) (make-complex-from-real-imag 
+               r 0)))
+  'done)
+
+(install-raise-operator)
+(define (raise x) (apply-generic 'raise x))
+
+(define one (make-integer 1))
+(define two (make-integer 2))
 
 (raise one)
 ;; (rational 1 . 1)
@@ -396,6 +372,34 @@
 ;; (real-number . 1.0)
 (raise (raise (raise one)))
 ;; (complex rectangular 1.0 . 0)
+
+;; Exercise 2.84
+
+(define (parents type)
+  (get 'parents type))
+
+(define (derive parent child)
+  (put 'parents child
+       (cons parent (or (parents child) '()))))
+
+(define (isa? from-type to-type)
+  (let ((ps (parents from-type)))
+    (and ps
+         (or (member to-type ps)
+             (ormap (lambda (f) (isa? f to-type)) ps)))))
+
+(define (casting from-type to-type)
+  (if (isa? from-type to-type)
+      raise
+      (get 'coercion (list from-type to-type))))
+
+(define (install-numerical-tower)
+  (derive 'rational 'integer)
+  (derive 'real-number 'rational)
+  (derive 'complex 'real-number)
+  'done)
+
+(install-numerical-tower)
 
 (add one one)
 ;; (integer . 2)
@@ -408,8 +412,135 @@
 
 ;; Exercise 2.85
 (equ? one one)
-;; t
+;; #t
 (equ? one (raise one))
-;; t
+;; #t
 
-(define (install-project-package))
+(define (install-project-package)
+  (put 'project '(complex)          
+       (lambda (c) (make-real
+               (real-part c))))
+  (put 'project '(real-number)
+       (lambda (r) (let ((ratio (inexact->exact r)))
+                (make-rational
+                 (numerator ratio)
+                 (denominator ratio)))))
+  (put 'project '(rational)
+       (lambda (r) (make-integer
+               (let ((r (exact->inexact
+                         (/ (car r) (cdr r)))))
+                 (inexact->exact
+                  (floor r))))))
+  'done)
+
+(install-project-package)
+
+(define (project n)
+  (apply-generic 'project n))
+
+(project (raise (raise (raise one))))
+;; (real-number . 1.0)
+(project (raise (raise one)))
+;; (rational 1 . 1)
+(project (raise one))
+;; (integer . 1)
+
+(define (projectable type)
+  (get 'project (list type)))
+
+(define (lower n)
+  (if (and (pair? n)
+           (projectable (type-tag n)))
+    (let ((res (project n)))
+      (if (equ? (raise res) n)
+          (lower res) n)) n))
+
+(lower one) ;(integer . 1)
+(lower (raise one)) ;(integer . 1)
+(lower (make-rational 1 2)) ;(rational 1 . 2)
+(lower (raise (raise one))) ;(integer . 1)
+(lower (make-real 0.5)) ; (rational 1 . 2)
+(lower (make-complex-from-real-imag 1 0)) ; (integer . 1)
+(lower (make-complex-from-real-imag 1.5 0)) ; (rational 3 . 2)
+(lower (make-complex-from-real-imag 1 1)) ; (complex rectangular 1 . 1)
+
+(define (apply-generic op . args)
+  (let* ((type-tags (map type-tag args))
+         (proc (get op type-tags)))
+    (if proc 
+        (let ((res (apply proc (map contents args))))
+          (if (or (eq? op 'raise) (eq? op 'project))
+              res (lower res)))
+        (let ((casts (get-casts args)))
+          (if (not (empty? casts))
+              (apply apply-generic op (car casts))
+              (error "No method for these types"
+                     (list op type-tags)))))))
+
+(define z1 (make-complex-from-real-imag 1 0))
+
+(add one (raise one)) ; (integer . 2)
+(add z1 z1)           ; (integer . 2)
+
+;; Exercise 2.86
+
+(define z-one (make-complex-from-real-imag one one))
+;; (complex rectangular (integer . 1) integer . 1)
+(define z-two (make-complex-from-real-imag two two))
+;; (complex rectangular (integer . 2) integer . 2)
+(define z-three (make-complex-from-mag-ang (make-real pi) one))
+;; (complex polar (real-number . 3.141592653589793) integer . 1)
+
+(define (install-complex-package-v2)
+  ;; imported procedures from rectangular and polar packages
+  (define (make-from-real-imag x y)
+    ((get 'make-from-real-imag 'rectangular) x y))
+  (define (make-from-mag-ang r a)
+    ((get 'make-from-mag-ang 'polar) r a))
+  ;; internal procedures
+  (define (add-complex z1 z2)
+    (make-from-real-imag (add (real-part z1) (real-part z2))
+                         (add (imag-part z1) (imag-part z2))))
+  (define (sub-complex z1 z2)
+    (make-from-real-imag (sub (real-part z1) (real-part z2))
+                         (sub (imag-part z1) (imag-part z2))))
+  (define (mul-complex z1 z2)
+    (make-from-mag-ang (mul (magnitude z1) (magnitude z2))
+                       (add (angle z1) (angle z2))))
+  (define (div-complex z1 z2)
+    (make-from-mag-ang (div (magnitude z1) (magnitude z2))
+                       (sub (angle z1) (angle z2))))
+  ;; interface to rest of the system
+  (define (tag z) (attach-tag 'complex z))
+  (put 'add '(complex complex)
+       (lambda (z1 z2) (tag (add-complex z1 z2))))
+  (put 'sub '(complex complex)
+       (lambda (z1 z2) (tag (sub-complex z1 z2))))
+  (put 'mul '(complex complex)
+       (lambda (z1 z2) (tag (mul-complex z1 z2))))
+  (put 'div '(complex complex)
+       (lambda (z1 z2) (tag (div-complex z1 z2))))
+  (put 'equ? '(complex complex)
+       (lambda (i j) (and (equ? (real-part i) (real-part j))
+                     (equ? (imag-part i) (imag-part j)))))
+  (put '=zero? '(complex)
+       (lambda (x) (=zero? (magnitude x))))
+  (put 'project '(complex)          
+       (lambda (c) (make-real
+               (contents (real-part c)))))
+  (put 'raise '(real-number)
+       (lambda (r) (make-complex-from-real-imag 
+               (make-real r)
+               (make-real 0))))
+   'done)
+
+(install-complex-package-v2)
+
+(add z-one z-one)
+;; (complex rectangular (integer . 2) integer . 2)
+(sub z-one z-one)
+;; (integer . 0)
+(sub z-one z-two)
+;; (complex rectangular (integer . -1) integer . -1)
+;; (add z-two z-three)
+;; error cos: expects argument of type <number>; given (integer . 1)
