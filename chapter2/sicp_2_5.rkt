@@ -419,16 +419,17 @@
 (define (install-project-package)
   (put 'project '(complex)          
        (lambda (c) (make-real
-               (real-part c))))
+               (contents (real-part c)))))
   (put 'project '(real-number)
-       (lambda (r) (let ((ratio (inexact->exact r)))
+       (lambda (r) (let ((ratio (inexact->exact (contents r))))
                 (make-rational
                  (numerator ratio)
                  (denominator ratio)))))
   (put 'project '(rational)
        (lambda (r) (make-integer
                (let ((r (exact->inexact
-                         (/ (car r) (cdr r)))))
+                         (/ (contents (car r))
+                            (contents (cdr r))))))
                  (inexact->exact
                   (floor r))))))
   'done)
@@ -525,22 +526,27 @@
                      (equ? (imag-part i) (imag-part j)))))
   (put '=zero? '(complex)
        (lambda (x) (=zero? (magnitude x))))
-  (put 'project '(complex)          
-       (lambda (c) (make-real
-               (contents (real-part c)))))
-  (put 'raise '(real-number)
-       (lambda (r) (make-complex-from-real-imag 
-               (make-real r)
-               (make-real 0))))
-   'done)
+  'done)
 
 (install-complex-package-v2)
 
+(define (scheme-number-coercions)
+  (put-coercion 'scheme-number 'integer
+                (lambda (n) (make-integer (contents n))))
+  (put-coercion 'scheme-number 'rational
+                (lambda (n) (make-rational (contents n) 1)))
+  (put-coercion 'scheme-number 'complex
+                (lambda (n) (make-complex-from-real-imag
+                        (contents n) 0))))
+
+(scheme-number-coercions)
 (add z-one z-one)
 ;; (complex rectangular (integer . 2) integer . 2)
+(add z1 z1)
+;; (integer . 2)
 (sub z-one z-one)
 ;; (integer . 0)
 (sub z-one z-two)
 ;; (complex rectangular (integer . -1) integer . -1)
-;; (add z-two z-three)
+;(add z-two z-three)
 ;; error cos: expects argument of type <number>; given (integer . 1)
