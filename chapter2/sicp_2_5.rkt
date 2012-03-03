@@ -31,8 +31,10 @@
   (define (numer x) (car x))
   (define (denom x) (cdr x))
   (define (make-rat n d)
-    (let ((g (gcd n d)))
-      (cons (/ n g) (/ d g))))
+    (if (and (integer? n) (integer? d))
+        (let ((g (gcd n d)))
+          (cons (/ n g) (/ d g)))
+        (cons n d)))
   (define (add-rat x y)
     (make-rat (+ (* (numer x) (denom y))
                  (* (numer y) (denom x)))
@@ -453,6 +455,7 @@
   (if (and (pair? n)
            (projectable (type-tag n)))
     (let ((res (project n)))
+     ;(prn n) (prn res) (prn '*******)
       (if (equ? (raise res) n)
           (lower res) n)) n))
 
@@ -468,10 +471,15 @@
 (define (apply-generic op . args)
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
+    ;(prn 'apply-generic)
+    ;(prn op) (prn args) 
     (if proc 
         (let ((res (apply proc (map contents args))))
+          ;(prn 'result) (prn res) (prn '**********)
           (if (or (eq? op 'raise) (eq? op 'project))
-              res (lower res)))
+              res
+              (lower res)
+              ))
         (let ((casts (get-casts args)))
           (if (not (empty? casts))
               (apply apply-generic op (car casts))
@@ -500,8 +508,9 @@
     ((get 'make-from-mag-ang 'polar) r a))
   ;; internal procedures
   (define (add-complex z1 z2)
-    (make-from-real-imag (add (real-part z1) (real-part z2))
-                         (add (imag-part z1) (imag-part z2))))
+    (let ((res (make-from-real-imag (add (real-part z1) (real-part z2))
+                                     (add (imag-part z1) (imag-part z2)))))
+      res))
   (define (sub-complex z1 z2)
     (make-from-real-imag (sub (real-part z1) (real-part z2))
                          (sub (imag-part z1) (imag-part z2))))
@@ -526,6 +535,11 @@
                      (equ? (imag-part i) (imag-part j)))))
   (put '=zero? '(complex)
        (lambda (x) (=zero? (magnitude x))))
+  (put 'project '(complex)          
+       (lambda (c) (make-real
+               (contents (let ((rp (real-part c)))
+                           (if (eq? (type-tag rp) 'rational)
+                               (raise rp) rp))))))
   'done)
 
 (install-complex-package-v2)
@@ -534,7 +548,14 @@
   (put-coercion 'scheme-number 'integer
                 (lambda (n) (make-integer (contents n))))
   (put-coercion 'scheme-number 'rational
-                (lambda (n) (make-rational (contents n) 1)))
+                (lambda (n)
+                  (if (real? n)
+                      (let ((r (inexact->exact n)))
+                        (make-rational (numerator r)
+                                       (denominator r)))
+                      (make-rational (contents n) 1))))
+  (put-coercion 'scheme-number 'real-number
+                (lambda (n) (make-real (contents n))))
   (put-coercion 'scheme-number 'complex
                 (lambda (n) (make-complex-from-real-imag
                         (contents n) 0))))
@@ -550,3 +571,113 @@
 ;; (complex rectangular (integer . -1) integer . -1)
 ;(add z-two z-three)
 ;; error cos: expects argument of type <number>; given (integer . 1)
+
+(define (install-trigonometric-package)
+  (define tag (curry attach-tag 'real-number))
+  (define tag-cos (compose tag cos))
+  (put 'cos '(scheme-number) tag-cos)
+  (put 'cos '(integer) tag-cos)
+  (put 'cos '(rational)
+       (lambda (r) (tag (cos (/ (car r) (cdr r))))))
+  (put 'cos '(real-number) tag-cos)
+  (define tag-sin (compose tag sin))
+  (put 'sin '(scheme-number) tag-sin)
+  (put 'sin '(integer) tag-sin)
+  (put 'sin '(rational)
+       (lambda (r) (tag (sin (/ (car r) (cdr r))))))
+  (put 'sin '(real-number) tag-sin)
+  (define tag-atan (compose tag atan))
+  (put 'atan '(scheme-number) tag-atan)
+  (put 'atan '(scheme-number scheme-number) tag-atan)
+  (put 'atan '(integer) tag-atan)
+  (put 'atan '(integer integer) tag-atan)
+  (put 'atan '(rational)
+       (lambda (r) (tag (atan (/ (car r) (cdr r))))))
+  (put 'atan '(rational rational)
+       (lambda (r s) (tag (atan (/ (car r) (cdr r))
+                           (/ (car s) (cdr s))))))
+  (put 'atan '(real-number) tag-sin)
+  (put 'atan '(real-number real-number) tag-sin)
+   'done)
+
+(install-trigonometric-package)
+
+(define cosine (curry apply-generic 'cos))
+(define sine (curry apply-generic 'sin))
+(define arctan (curry apply-generic 'atan))
+
+(define (square x)
+  (mul x x))
+
+(define (install-sqrt-package)
+  (define default (compose sqrt contents))
+  (put 'sqrt '(scheme-number) default)
+  (put 'sqrt '(integer) default)
+  (put 'sqrt '(rational)
+       (lambda (r) (/ (default (car r))
+                 (default (cdr r))))))
+
+(install-sqrt-package)
+(define sqrt (curry apply-generic 'sqrt))
+
+(define (install-rectangular-package-v2)
+  (define (real-part z) (car z))
+  (define (imag-part z) (cdr z))
+  (define (magnitude z)
+    (sqrt (add (square (real-part z))
+               (square (imag-part z)))))
+  (define (angle z)
+    (arctan (imag-part z) (real-part z)))
+  (define (tag x) (attach-tag 'rectangular x))
+  (define (make-from-mag-ang r a) 
+    (cons (* r (cosine a)) (* r (sine a))))
+  (put 'make-from-mag-ang 'rectangular 
+       (lambda (r a) (tag (make-from-mag-ang r a))))
+  (put 'real-part '(rectangular) real-part)
+  (put 'imag-part '(rectangular) imag-part)
+  (put 'magnitude '(rectangular) magnitude)
+  (put 'angle '(rectangular) angle)
+  'done)
+
+(install-rectangular-package-v2)
+
+(define (install-polar-package-v2)
+  ;; internal procedures
+  (define (real-part z)
+    (mul (car z) (cosine (cdr z))))
+  (define (imag-part z)
+    (mul (car z) (sine (cdr z))))
+  (define (make-from-real-imag x y) 
+    (cons (sqrt (sum (square x) (square y)))
+          (arctan y x)))
+  ;; interface to the rest of the system
+  (define (tag x) (attach-tag 'polar x))
+  (put 'real-part '(polar) real-part)
+  (put 'imag-part '(polar) imag-part)
+  (put 'make-from-real-imag 'polar
+       (lambda (x y) (tag (make-from-real-imag x y))))
+  'done)
+
+(install-polar-package-v2)
+
+(add z-two z-three)
+;;(complex rectangular
+;;         (rational 16651653194101815 . 4503599627370496)
+;;         rational 10456365435335067 . 2251799813685248)
+
+(sub z-three z-two)
+;;(complex rectangular
+;;         (rational -1362745315380169 . 4503599627370496)
+;;         rational 1449166180594075 . 2251799813685248)
+(mul z-three z-two)
+;;(complex polar
+;;         (rational 5632023223300212547393616123015 .
+;;                   633825300114114700748351602688)
+;;         rational
+;;         2010179625846179 . 1125899906842624)
+(div z-three z-two)
+;;(complex polar
+;;         (rational 884279719003555/2251799813685248 .
+;;                   281474976710656/6369051672525773)
+;;         rational
+;;         241620187839069 . 1125899906842624)
