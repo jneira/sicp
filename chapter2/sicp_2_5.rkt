@@ -455,7 +455,6 @@
   (if (and (pair? n)
            (projectable (type-tag n)))
     (let ((res (project n)))
-     ;(prn n) (prn res) (prn '*******)
       (if (equ? (raise res) n)
           (lower res) n)) n))
 
@@ -471,15 +470,10 @@
 (define (apply-generic op . args)
   (let* ((type-tags (map type-tag args))
          (proc (get op type-tags)))
-    ;(prn 'apply-generic)
-    ;(prn op) (prn args) 
     (if proc 
         (let ((res (apply proc (map contents args))))
-          ;(prn 'result) (prn res) (prn '**********)
           (if (or (eq? op 'raise) (eq? op 'project))
-              res
-              (lower res)
-              ))
+              res (lower res)))
         (let ((casts (get-casts args)))
           (if (not (empty? casts))
               (apply apply-generic op (car casts))
