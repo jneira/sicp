@@ -1,4 +1,5 @@
 ;; 2.5  Systems with Generic Operations
+;; This code depends on several definitions of previous one
 
 (define (prn s) (write s) (newline))
 
@@ -328,7 +329,7 @@
   (put 'mul self (trans 'mul))
   (put 'div self (trans 'div))
   (put 'equ? self (get 'equ? sn))
-  (put '=zero? self (get '=zero? (car sn)))
+  (put '=zero? (cdr self) (get '=zero? (cdr sn)))
   'done)
 
 (define (install-real-package)
@@ -342,7 +343,7 @@
   (put 'mul self (trans 'mul))
   (put 'div self (trans 'div))
   (put 'equ? self (get 'equ? sn))
-  (put '=zero? self (get '=zero? (car sn)))
+  (put '=zero? (cdr self) (get '=zero? (cdr sn)))
   'done)
 
 (install-integer-package)
@@ -621,7 +622,8 @@
     (sqrt (add (square (real-part z))
                (square (imag-part z)))))
   (define (angle z)
-    (arctan (imag-part z) (real-part z)))
+    (if (=zero? (imag-part z)) 0
+        (arctan (imag-part z) (real-part z))))
   (define (tag x) (attach-tag 'rectangular x))
   (define (make-from-mag-ang r a) 
     (cons (* r (cosine a)) (* r (sine a))))
