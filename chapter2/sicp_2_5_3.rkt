@@ -104,8 +104,9 @@
   (if (null? xs) '()
       (let ((nxt (map-indexed f (cdr xs))))
         (if (=zero? (car xs)) nxt
-            (cons (f (length xs) (car xs))
+            (cons (f (- (length xs) 1) (car xs))
                   nxt)))))
+
 (define make-sparse-term-list
   (curry map-indexed (lambda (i x) (make-term i x))))
 
@@ -239,10 +240,12 @@
 
 (define (install-sparse-term-list-package)
   (define tag (curry attach-tag 'sparse))
+  (define remove-zero-coeff
+    (curry filter (compose not =zero? coeff)))
   (define make-sparse-term-list
-    (curry map-indexed
-           (lambda (i x)
-             (make-term i x))))
+    (compose remove-zero-coeff
+             (curry map-indexed
+                    (curry make-term))))
   (define  (make-term-list xs)
     (tag (make-sparse-term-list xs)))
   (define (adjoin-term term term-list)
@@ -331,3 +334,71 @@
 (mul p1d p2)
 (mul p1 p2d)
 
+;; Exercise 2.91
+
+;; Division can be performed via long division. That is, divide the
+;; highest-order term of the dividend by the highest-order term of the
+;; divisor. The result is the first term of the quotient. Next,
+;; multiply the result by the divisor, subtract that from the
+;; dividend, and produce the rest of the answer by recursively
+;; dividing the difference by the divisor. Stop when the order of the
+;; divisor exceeds the order of the dividend and declare the dividend
+;; to be the remainder. Also, if the dividend ever becomes zero,
+;; return zero as both quotient and remainder.
+
+
+(define (div-terms L1 L2)
+  (prn '********) (prn L1) (prn L2)
+  (if (empty-termlist? L1)
+      (list (the-empty-termlist) (the-empty-termlist))
+      (let ((t1 (first-term L1))
+            (t2 (first-term L2)))
+        (if (> (order t2) (order t1))
+            (list (the-empty-termlist) L1)
+            (let* ((new-c (div (coeff t1) (coeff t2)))
+                   (new-o (- (order t1) (order t2)))
+                   (term (make-term new-o new-c))
+                   (next-dividend
+                    (sub-terms L1 (mul-term-by-all-terms term L2)))
+                   (rest-of-result (div-terms next-dividend L2)))
+              (prn term) (prn next-dividend)
+              (prn '*******)
+              (list (adjoin-term term
+                                 (car rest-of-result))
+                    (cadr rest-of-result)))))))
+
+(define (div-poly p1 p2)
+  (if (same-variable? (variable p1) (variable p2))
+      (map (curry  make-poly (variable p1))
+           (div-terms (term-list p1)
+                      (term-list p2)))
+      (error "Polys not in same var -- DIV-POLY"
+             (list p1 p2))))
+
+(define (install-polynomial-ext-package)
+  (define (tag p) (attach-tag 'polynomial p))
+  (put 'div '(polynomial polynomial) 
+       (lambda (p1 p2) (map tag (div-poly p1 p2))))
+  'done)
+
+(install-polynomial-ext-package)
+
+(define (mk var xs)
+  (make-polynomial
+   var (make-sparse-term-list xs)))
+
+(define x^3-1 (mk 'x '(1 0 -1)))
+(define x^2-1 (mk 'x '(1 -1)))
+
+(equal?
+ (div x^3-1 x^2-1)
+ '((polynomial
+    x
+    sparse
+    (term 1 (scheme-number . 1))
+    (term 0 (scheme-number . -1)))
+   (polynomial x sparse (term 1 (scheme-number . -2)))))
+
+;; x | -x-1
+
+;; Hierarchies of types in symbolic algebra
