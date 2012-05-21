@@ -399,6 +399,6 @@
     (term 0 (scheme-number . -1)))
    (polynomial x sparse (term 1 (scheme-number . -2)))))
 
-;; x | -x-1
+;; Exercise 2.92
 
 ;; Hierarchies of types in symbolic algebra
