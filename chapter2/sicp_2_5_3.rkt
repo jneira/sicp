@@ -1,4 +1,5 @@
 ;; 2.5.3  Example: Symbolic Algebra
+;; 
 
 (define (make-poly variable term-list)
   (cons variable term-list))
@@ -201,6 +202,28 @@
 
 ;;Exercise 2.88.
 
+(define (op-terms op L1 L2)
+  (cond ((empty-termlist? L1) L2)
+        ((empty-termlist? L2) L1)
+        (else
+         (let ((t1 (first-term L1)) (t2 (first-term L2)))
+           (cond ((> (order t1) (order t2))
+                  (adjoin-term 
+                   t1 (op-terms op (rest-terms L1) L2)))
+                 ((< (order t1) (order t2))
+                  (adjoin-term
+                   (make-term (order t2) (op 0 (coeff t2)))
+                   (op-terms op L1 (rest-terms L2))))
+                 (else
+                  (adjoin-term
+                   (make-term (order t1)
+                              (op (coeff t1) (coeff t2)))
+                   (op-terms op (rest-terms L1)
+                             (rest-terms L2)))))))))
+
+(define (sub-terms L1 L2)
+  (op-terms sub  L1 L2))
+
 (define (sub-poly p1 p2)
   (if (same-variable? (variable p1) (variable p2))
       (make-poly (variable p1)
@@ -209,8 +232,6 @@
       (error "Polys not in same var -- ADD-POLY"
              (list p1 p2))))
 
-(define (sub-terms L1 L2)
-  (op-terms sub  L1 L2))
 
 (put 'sub '(polynomial polynomial) 
      (lambda (p1 p2) (attach-tag 'polynomial (sub-poly p1 p2))))
@@ -224,6 +245,8 @@
                 scheme-number . 3))
    (1 (complex rectangular (scheme-number . 2) scheme-number . -3))))
 
+(sub (make-polynomial 'x (make-sparse-term-list '(0 0)))
+     (make-polynomial 'x (make-sparse-term-list '(0 0))))
 ;; Exercise 2.89. and 2.90
 
 (define (install-term-package)
@@ -348,7 +371,6 @@
 
 
 (define (div-terms L1 L2)
-  (prn '********) (prn L1) (prn L2)
   (if (empty-termlist? L1)
       (list (the-empty-termlist) (the-empty-termlist))
       (let ((t1 (first-term L1))
@@ -358,11 +380,9 @@
             (let* ((new-c (div (coeff t1) (coeff t2)))
                    (new-o (- (order t1) (order t2)))
                    (term (make-term new-o new-c))
-                   (next-dividend
-                    (sub-terms L1 (mul-term-by-all-terms term L2)))
+                   (mult (mul-term-by-all-terms term L2))
+                   (next-dividend (sub-terms L1 mult))
                    (rest-of-result (div-terms next-dividend L2)))
-              (prn term) (prn next-dividend)
-              (prn '*******)
               (list (adjoin-term term
                                  (car rest-of-result))
                     (cadr rest-of-result)))))))
@@ -387,18 +407,17 @@
   (make-polynomial
    var (make-sparse-term-list xs)))
 
-(define x^3-1 (mk 'x '(1 0 -1)))
-(define x^2-1 (mk 'x '(1 -1)))
+(define x^3-1 (mk 'x '(1 0 0 -1)))
+(define x^2-1 (mk 'x '(1 0 -1)))
 
 (equal?
  (div x^3-1 x^2-1)
- '((polynomial
-    x
-    sparse
-    (term 1 (scheme-number . 1))
-    (term 0 (scheme-number . -1)))
-   (polynomial x sparse (term 1 (scheme-number . -2)))))
+ '((polynomial x sparse (term 1 (scheme-number . 1)))
+   (polynomial x sparse (term 1 (scheme-number . 1)) (term 0 -1))))
 
 ;; Exercise 2.92
 
+
+
 ;; Hierarchies of types in symbolic algebra
+

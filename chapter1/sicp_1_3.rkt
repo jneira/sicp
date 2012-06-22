@@ -8,7 +8,7 @@
 ;; (f f) -> (f 2) -> (2 2)
 ;; Este ultimo provocaria un error
 
-(define (f g) (g 2))
+;(define (f g) (g 2))
 
 ;; Using let to create local variables
 
@@ -176,10 +176,10 @@
 
 ;; Exercise 1.40.
 
-(newtons-method (cubic 1 1 1) 1)
-
 (define (cubic a b c)
   (lambda (x) (+ (* x x x) (* a x x) (* b x) c)))
+
+(newtons-method (cubic 1 1 1) 1)
 
 ;; Exercise 1.41.
 

@@ -25,16 +25,16 @@
 (define (dec x) (- x 1))
 (define (inc x) (+ x 1))
 
-(define (+ a b)
+(define (rec+ a b)
   (if (= a 0)
       b
       (inc (+ (dec a 1) b))))
 
-;; (+ 4 5)
-;; (inc (+ 3 5))
-;; (inc (inc (+ 2 5)))
-;; (inc (inc (inc (+ 1 5))))
-;; (inc (inc (inc (inc (+ 0 5)))))
+;; (rec+ 4 5)
+;; (inc (rec+ 3 5))
+;; (inc (inc (rec+ 2 5)))
+;; (inc (inc (inc (rec+ 1 5))))
+;; (inc (inc (inc (inc (rec+ 0 5)))))
 ;; (inc (inc (inc (inc 5))))
 ;; (inc (inc (inc 6)))
 ;; (inc (inc 7))
@@ -42,16 +42,16 @@
 ;; 9
 ;; recursive
 
-(define (+ a b)
+(define (tcr+ a b)
   (if (= a 0)
       b
-      (+ (dec a) (inc b))))
+      (tcr+ (dec a) (inc b))))
 
-;; (+ 4 5)
-;; (+ 3 6)
-;; (+ 2 7)
-;; (+ 1 8)
-;; (+ 0 9)
+;; (tcr+ 4 5)
+;; (tcr+ 3 6)
+;; (tcr+ 2 7)
+;; (tcr+ 1 8)
+;; (tcr+ 0 9)
 ;; 9
 ;; iterative
 

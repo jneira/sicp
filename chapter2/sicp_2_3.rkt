@@ -318,40 +318,38 @@
   (cond ((null? set) false)
         ((= x (entry set)) true)
         ((< x (entry set))
-         (element-of-set? x (left-branch set)))
+         (element-of-set? x (bt/left-branch set)))
         ((> x (entry set))
-         (element-of-set? x (right-branch set)))))
+         (element-of-set? x (bt/right-branch set)))))
 
 (define (bt/adjoin-set x set)
-  (cond ((null? set) (make-tree x '() '()))
+  (cond ((null? set) (bt/make-tree x '() '()))
         ((= x (entry set)) set)
         ((< x (entry set))
-         (make-tree (entry set) 
-                    (adjoin-set x (left-branch set))
-                    (right-branch set)))
+         (bt/make-tree (entry set) 
+                    (bt/adjoin-set x (bt/left-branch set))
+                    (bt/right-branch set)))
         ((> x (entry set))
-         (make-tree (entry set)
-                    (left-branch set)
-                    (adjoin-set x (right-branch set))))))
+         (bt/make-tree (entry set)
+                    (bt/left-branch set)
+                    (bt/adjoin-set x (bt/right-branch set))))))
 
 ;; Exercise 2.63
 
 (define (tree->list-1 tree)
-  (write tree) (newline)
   (if (null? tree)
       '()
-      (append (tree->list-1 (left-branch tree))
-              (cons (entry tree)
-                    (tree->list-1 (right-branch tree))))))
+      (append (tree->list-1 (bt/left-branch tree))
+              (cons (bt/entry tree)
+                    (tree->list-1 (bt/right-branch tree))))))
 
 (define (tree->list-2 tree)
   (define (copy-to-list tree result-list)
-    (write tree) (newline)
     (if (null? tree)
         result-list
-        (copy-to-list (left-branch tree)
-                      (cons (entry tree)
-                            (copy-to-list (right-branch tree)
+        (copy-to-list (bt/left-branch tree)
+                      (cons (bt/entry tree)
+                            (copy-to-list (bt/right-branch tree)
                                           result-list)))))
   (copy-to-list tree '()))
 
@@ -476,6 +474,10 @@
 (define (symbol-leaf x) (cadr x))
 (define (weight-leaf x) (caddr x))
 
+(define (symbols tree)
+  (if (leaf? tree)
+      (list (symbol-leaf tree))
+      (caddr tree)))
 (define (make-code-tree left right)
   (list left
         right
@@ -484,10 +486,7 @@
 
 (define (left-branch tree) (car tree))
 (define (right-branch tree) (cadr tree))
-(define (symbols tree)
-  (if (leaf? tree)
-      (list (symbol-leaf tree))
-      (caddr tree)))
+
 (define (weight tree)
   (if (leaf? tree)
       (weight-leaf tree)
