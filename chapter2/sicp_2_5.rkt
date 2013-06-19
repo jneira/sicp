@@ -1,5 +1,6 @@
 ;; 2.5  Systems with Generic Operations
 ;; This code depends on several definitions of previous one
+(load "sicp_2_4.rkt")
 
 (define (prn s) (write s) (newline))
 
@@ -265,7 +266,7 @@
 (define (apply-generic op args)
   (let ((type-tags (map type-tag args)))
    (if (and (= (length args) 2)
-            (not (apply equal? type-tags)))
+            (not (apply eq? type-tags)))
        (let* ((type1 (car type-tags))
               (type2 (cadr type-tags))
               (t1->t2 (get-coercion type1 type2))
@@ -300,7 +301,7 @@
 (define (get-casts args)
   (define type-tags (map type-tag args))
   (define (cast arg to-type)
-    (if (equal? (type-tag arg) to-type) arg
+    (if (eq? (type-tag arg) to-type) arg
         (let ((casting-op
                (casting (type-tag arg) to-type))) 
           (and casting-op (casting-op arg)))))
@@ -311,7 +312,7 @@
       (if (member false casted-args) acc
           (cons casted-args acc))))
   (if (and (> (length args) 1)
-           (not (apply equal? type-tags)))
+           (not (apply eq? type-tags)))
       (foldl acc-casts '() type-tags)
      '()))
 

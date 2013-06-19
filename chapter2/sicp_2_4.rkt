@@ -1,3 +1,4 @@
+(load "sicp_2_3.rkt")
 ;; 2.4  Multiple Representations for Abstract Data
 
 ;; 2.4.1  Representations for Complex Numbers
@@ -162,7 +163,7 @@
 (define table '())
 
 (define (put op type impl)
-  (define (eqcar x xs) (equal? x (car xs)))
+  (define (eqcar x xs) (eq? x (car xs)))
   (let* ((op-aux (if (pair? op) (car op) op))
          (types-impls (cdr (or (assoc op table) (list op))))
          (rest-types-impls (remove type types-impls eqcar))

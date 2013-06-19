@@ -25,15 +25,15 @@
 ;;Exercise 2.54.
 
 (define (equal? xs ys)
-  (let* ((hx (car xs)) (hy (car ys))
-         (tx (cdr xs)) (ty (cdr y)))
-    (or
-     (and (null? xs) (null ys))
-     (and (eq? hx hy)
-          (equal? tx ty))
-     (and (pair? hx) (pair? hy)
-          (equal? hx hy)
-          (equal? tx ty)))))
+  (or (and (null? xs) (null? ys))
+      (and  (not (null? xs)) (not (null? ys))
+            (let* ((hx (car xs)) (hy (car ys))
+                   (tx (cdr xs)) (ty (cdr ys)))
+              (or (and (eq? hx hy)
+                       (equal? tx ty))
+                  (and (pair? hx) (pair? hy)
+                       (equal? hx hy)
+                       (equal? tx ty)))))))
 
 ;;Exercise 2.55.
 

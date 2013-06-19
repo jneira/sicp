@@ -1,3 +1,4 @@
+(load "sicp_2_5.rkt")
 ;; 2.5.3  Example: Symbolic Algebra
 ;; 
 
@@ -111,11 +112,13 @@
 (define make-sparse-term-list
   (curry map-indexed (lambda (i x) (make-term i x))))
 
-(define p1 (make-polynomial
-            'x (make-sparse-term-list (list 3 z2+3i 7))))
+(define (mk var xs)
+  (make-polynomial
+   var (make-sparse-term-list xs)))
+
+(define p1 (mk 'x (list 3 z2+3i 7)))
 ;; (polynomial x (3 3) (2 (complex rectangular 2 . 3)) (1 7))
-(define p2 (make-polynomial
-            'x (make-sparse-term-list (list 1 0 r2/3  z5+3i))))
+(define p2 (mk 'x (list 1 0 r2/3  z5+3i)))
 ;; (polynomial x (4 1) (2 (rational 2 . 3)) (1 (complex rectangular 5 . 3)))
 
 
@@ -123,82 +126,106 @@
  (add p1 p2)
 
  '(polynomial
-   x (4 1) (3 3)
-   (2 (complex rectangular
-               (scheme-number . 2.6666666666666665)
-               scheme-number . 3))
+   x
+   (3 1)
+   (2 3)
    (1 (complex rectangular
+               (scheme-number . 2.6666666666666665) scheme-number . 3))
+   (0 (complex rectangular
                (scheme-number . 12) scheme-number . 3))))
 
 (equal?
  (mul p1 p2)
- 
- '(polynomial
-  x (7 (scheme-number . 3))
-  (6 (complex  polar (scheme-number . 3.605551275463989)
-               rational 8852218891597467 . 9007199254740992))
-  (5 (integer . 9))
-  (4 (complex rectangular
-              (rational 2298712309803691.0 . 140737488355328.0)
-              rational 6192449487634433.0 . 562949953421312.0))
-  (3 (complex rectangular
-              (rational 6380099472108203.0 . 1125899906842624.0)
-              rational 5910974510923777.0 . 281474976710656.0))
-  (2 (complex polar
-              (scheme-number . 40.81666326391711)
-              rational 4867666120084705 . 9007199254740992))))
 
-(define p22 (make-polynomial 'x (make-sparse-term-list '(2 2))))
+ '(polynomial
+   x
+   (5 (scheme-number . 3))
+   (4
+    (complex
+     polar
+     (scheme-number . 3.605551275463989)
+     rational
+     8852218891597467
+     .
+     9007199254740992))
+   (3 (integer . 9))
+   (2
+    (complex
+     rectangular
+     (rational 2298712309803691.0 . 140737488355328.0)
+     rational
+     6192449487634433.0
+     .
+     562949953421312.0))
+   (1
+    (complex
+     rectangular
+     (rational 6380099472108203.0 . 1125899906842624.0)
+     rational
+     5910974510923777.0
+     .
+     281474976710656.0))
+   (0
+    (complex
+     polar
+     (scheme-number . 40.81666326391711)
+     rational
+     4867666120084705
+     .
+     9007199254740992))))
+
+(define p22 (mk 'x '(2 2)))
 
 ;; Exercise 2.87
 
 (put '=zero? '(polynomial) (compose null? cdr))
 
-(define p3 (make-polynomial
-            'x (make-sparse-term-list
-                (list
-                 (make-polynomial 'y '((2 1) (1 1)))
-                 (make-polynomial 'y '((3 1) (1 1)))
-                 (make-polynomial 'y '((2 1) (1 -1)))))))
+(define p3
+  (mk 'x 
+      (list
+       (mk 'y '(1 1))
+       (mk 'y '(1 0 1))
+       (mk 'y '(1 -1)))))
 
-(define p4 (make-polynomial
-            'x (make-sparse-term-list
-                (list
-                 (make-polynomial 'y '((2 1) (1 -2)))
-                 (make-polynomial 'y '((3 1) (1 7)))))))
+(define p4
+  (mk 'x 
+      (list
+       (mk 'y '(1 -2))
+       (mk 'y '(1 0 7)))))
 
 (equal?
  (add p3 p4)
 
  '(polynomial
   x
-  (3 (polynomial y (2 1) (1 1)))
-  (2 (polynomial y (3 1) (2 1) (1 (scheme-number . -1))))
-  (1 (polynomial y (3 1) (2 1) (1 (scheme-number . 6))))))
+  (2 (polynomial y (1 1) (0 1)))
+  (1 (polynomial y (2 1) (1 1) (0 (scheme-number . -1))))
+  (0 (polynomial y (2 1) (1 1) (0 (scheme-number . 6))))))
 
 (equal?
  (mul p3 p4)
- 
+
  '(polynomial
-   x (5 (polynomial
-         y (4 (scheme-number . 1))
-                (3 (scheme-number . -1))
-                (2 (scheme-number . -2))))
-   (4 (polynomial
-       y (5 (scheme-number . 2))
-       (4 (scheme-number . -1))
-       (3 (scheme-number . 8))
-       (2 (scheme-number . 5))))
+   x
    (3 (polynomial
-       y (6 (scheme-number . 1))
-       (4 (scheme-number . 9))
-       (3 (scheme-number . -3))
-       (2 (scheme-number . 9))))
+       y (2 (scheme-number . 1))
+         (1 (scheme-number . -1))
+         (0 (scheme-number . -2))))
    (2 (polynomial
-       y (5 (scheme-number . 1))
-              (4 (scheme-number . -1))
-              (3 (scheme-number . 7))
-              (2 (scheme-number . -7))))))
+       y (3 (scheme-number . 2))
+         (2 (scheme-number . -1))
+         (1 (scheme-number . 8))
+         (0 (scheme-number . 5))))
+   (1 (polynomial
+       y (4 (scheme-number . 1))
+         (2 (scheme-number . 9))
+         (1 (scheme-number . -3))
+         (0 (scheme-number . 9))))
+   (0 (polynomial
+       y (3 (scheme-number . 1))
+         (2 (scheme-number . -1))
+         (1 (scheme-number . 7))
+         (0 (scheme-number . -7))))))
 
 ;;Exercise 2.88.
 
@@ -238,12 +265,16 @@
 
 (equal?
  (sub p1 p2)
+
  '(polynomial
-   x (4 1) (3 3)
-   (2 (complex rectangular
-               (scheme-number . 1.3333333333333335)
-                scheme-number . 3))
-   (1 (complex rectangular (scheme-number . 2) scheme-number . -3))))
+  x
+  (3 (scheme-number . -1)) (2 3)
+  (1 (complex rectangular
+              (scheme-number . 1.3333333333333335)
+              scheme-number . 3))
+  (0 (complex rectangular
+              (scheme-number . 2)
+              scheme-number . -3))))
 
 (sub (make-polynomial 'x (make-sparse-term-list '(0 0)))
      (make-polynomial 'x (make-sparse-term-list '(0 0))))
@@ -319,20 +350,18 @@
 (define (make-sparse-term-list term-list)
   (make-term-list (attach-tag 'sparse term-list)))
 
-(define p1 (make-polynomial
-            'x (make-sparse-term-list (list 3 z2+3i 7))))
-(define p2 (make-polynomial
-            'x (make-sparse-term-list (list 1 0 r2/3  z5+3i))))
+(define p1 (mk 'x (list 3 z2+3i 7)))
+(define p2 (mk 'x (list 1 0 r2/3  z5+3i)))
 
 (equal?
  (add p1 p2)
  '(polynomial
    x sparse
-   (term 4 1) (term 3 3)
-   (term 2 (complex rectangular
+   (term 3 (scheme-number . 1)) (term 2 3)
+   (term 1 (complex rectangular
                     (scheme-number . 2.6666666666666665)
                     scheme-number . 3))
-   (term 1 (complex rectangular
+   (term 0 (complex rectangular
                     (scheme-number . 12) scheme-number . 3))))
 
 (define default-term-list-type 'sparse)
@@ -379,13 +408,13 @@
             (list (the-empty-termlist) L1)
             (let* ((new-c (div (coeff t1) (coeff t2)))
                    (new-o (- (order t1) (order t2)))
-                   (term (make-term new-o new-c))
-                   (mult (mul-term-by-all-terms term L2))
-                   (next-dividend (sub-terms L1 mult))
-                   (rest-of-result (div-terms next-dividend L2)))
-              (list (adjoin-term term
-                                 (car rest-of-result))
-                    (cadr rest-of-result)))))))
+                   (term (make-term new-o new-c)))
+              (let* ((mult (mul-term-by-all-terms term L2))
+                     (next-dividend (sub-terms L1 mult))
+                     (rest-of-result (div-terms next-dividend L2)))
+                (list (adjoin-term term
+                                   (car rest-of-result))
+                      (cadr rest-of-result))))))))
 
 (define (div-poly p1 p2)
   (if (same-variable? (variable p1) (variable p2))
@@ -403,10 +432,6 @@
 
 (install-polynomial-ext-package)
 
-(define (mk var xs)
-  (make-polynomial
-   var (make-sparse-term-list xs)))
-
 (define x^3-1 (mk 'x '(1 0 0 -1)))
 (define x^2-1 (mk 'x '(1 0 -1)))
 
@@ -417,7 +442,36 @@
 
 ;; Exercise 2.92
 
+(define p3
+  (mk 'x 
+      (list
+       (mk 'y '(1 1))
+       (mk 'y '(1 0 1))
+       (mk 'y '(1 -1)))))
+
+(define p4
+  (mk 'x
+      (list
+       (mk 'y '(1 -2))
+       (mk 'y '(1 0 7)))))
+
+(add p3 p4)
+(sub p3 p4)
+(mul p3 p4)
 
 
 ;; Hierarchies of types in symbolic algebra
 
+(define (add-poly p1 p2)
+  (if (same-variable? (variable p1) (variable p2))
+      (make-poly (variable p1)
+                 (add-terms (term-list p1)
+                            (term-list p2)))
+     (apply add-poly (canonical p1 p2))))
+
+(define (mul-poly p1 p2)
+  (if (same-variable? (variable p1) (variable p2))
+      (make-poly (variable p1)
+                 (mul-terms (term-list p1)
+                            (term-list p2)))
+      (apply mul-poly (canonical p1 p2))))
