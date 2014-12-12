@@ -95,6 +95,16 @@
 
 (install-polynomial-package)
 
+(define (term-list p)
+  (if (eq? (type-tag p) 'polynomial)
+      (term-list (contents p))
+      (cdr p)))
+
+(define (variable p)
+  (if (eq? (type-tag p) 'polynomial)
+      (variable (contents p))
+      (car p)))
+
 (define (make-polynomial var terms)
   ((get 'make 'polynomial) var terms))
 
@@ -334,7 +344,7 @@
 
 (install-dense-term-list-package)
 
-(define make-term-list 
+(define make-term-list  
   (curry apply-generic 'make-term-list))
 (define adjoin-term
   (curry apply-generic 'adjoin-term))
@@ -345,10 +355,12 @@
 (define empty-termlist?
   (curry apply-generic 'empty-termlist?))
 
-(define (make-dense-term-list term-list)
-  (make-term-list (attach-tag 'dense term-list)))
-(define (make-sparse-term-list term-list)
-  (make-term-list (attach-tag 'sparse term-list)))
+(define (make-term-list-type tag terms)
+  (make-term-list (attach-tag tag terms)))
+(define (make-dense-term-list terms)
+  (make-term-list-type 'dense terms))
+(define (make-sparse-term-list terms)
+  (make-term-list-type 'sparse terms))
 
 (define p1 (mk 'x (list 3 z2+3i 7)))
 (define p2 (mk 'x (list 1 0 r2/3  z5+3i)))
@@ -365,8 +377,10 @@
                     (scheme-number . 12) scheme-number . 3))))
 
 (define default-term-list-type 'sparse)
+(define (empty-termlist type)
+  (make-term-list-type type '()))
 (define (the-empty-termlist)
-  (attach-tag default-term-list-type '()))
+  (empty-termlist default-term-list-type))
 
 (mul p1 p2)
 
@@ -440,34 +454,94 @@
  '((polynomial x sparse (term 1 (scheme-number . 1)))
    (polynomial x sparse (term 1 (scheme-number . 1)) (term 0 -1))))
 
-;; Exercise 2.92
-
-(define p3
-  (mk 'x 
-      (list
-       (mk 'y '(1 1))
-       (mk 'y '(1 0 1))
-       (mk 'y '(1 -1)))))
-
-(define p4
-  (mk 'x
-      (list
-       (mk 'y '(1 -2))
-       (mk 'y '(1 0 7)))))
-
-(add p3 p4)
-(sub p3 p4)
-(mul p3 p4)
-
-
 ;; Hierarchies of types in symbolic algebra
+
+;; Exercise 2.92.  By imposing an ordering on variables, extend the
+;; polynomial package so that addition and multiplication of
+;; polynomials works for polynomials in different variables. (This is
+;; not easy!) 
+
+
+(define (expand-term t)
+  (if (eq? (type-tag (coeff t)) 'polynomial)
+      (map (lambda (p) (make-term (order t) p))
+           (expand (coeff t)))
+      (list t)))
+
+(define (separate-terms term-list)
+  (if (empty-termlist? term-list) '()
+      (append (expand-term (first-term term-list))
+              (separate-terms (rest-terms term-list)))))
+
+(define (term->poly var term-type term)
+  (make-polynomial var
+   (adjoin-term term (empty-termlist term-type))))
+
+(define (any->poly var term-type ord coeff)
+  (term->poly var term-type (make-term ord coeff)))
+
+(define (expand p)
+   (let* ((tl (term-list p))  (ts (separate-terms tl))
+         (tl-type (type-tag tl)))
+    (map (lambda (t) (term->poly (variable p) tl-type t))
+         ts)))
+
+(define (polynomial? p)
+  (eq? (type-tag p) 'polynomial))
+
+(define (order-by-var var p)
+  (define (next-term poly)
+    (first-term (term-list poly)))
+  (define (get-order poly)
+    (if (polynomial? poly)
+        (let ((nxt-term (next-term poly)))
+         (if (eq? (variable poly) var)
+             (order nxt-term)
+             (get-order (coeff nxt-term))))
+        0))
+  (define (remove-var poly)
+    (if (polynomial? poly)
+        (let* ((tlist (type-tag (term-list poly)))
+               (varp (variable poly))
+               (nxt-term (next-term poly))
+               (nxt (coeff nxt-term))
+               (nxt-ord (order nxt-term)))
+          (if (eq? varp var) nxt
+              (any->poly varp tlist nxt-ord (remove-var nxt))))
+        poly))
+  (let* ((order (get-order p))
+         (wout-var (remove-var p))
+         (tlist (type-tag (term-list p))))
+    (any->poly var tlist order wout-var)))
+
+(define (install-number->poly-package)
+  (define (number->poly-op op n p)
+    (let ((tlist (type-tag (term-list p)))
+          (v (variable p)))
+      (op (any->poly v tlist 0 n)
+          (attach-tag 'polynomial p))))
+  (put 'add '(scheme-number  polynomial)
+       (curry number->poly-op add))
+  (put 'mul '(scheme-number  polynomial)
+       (curry number->poly-op mul))
+  'done)
+
+(install-number->poly-package)
+
+(define (combine polys)
+  (foldr add (car polys) (cdr polys)))
+
+(define (canonical p1 p2)
+  (list p1 (combine
+            (map (curry order-by-var (variable p1))
+                 (expand p2)))))
 
 (define (add-poly p1 p2)
   (if (same-variable? (variable p1) (variable p2))
       (make-poly (variable p1)
                  (add-terms (term-list p1)
                             (term-list p2)))
-     (apply add-poly (canonical p1 p2))))
+      (apply add-poly (canonical p1 p2))))
 
 (define (mul-poly p1 p2)
   (if (same-variable? (variable p1) (variable p2))
@@ -475,3 +549,64 @@
                  (mul-terms (term-list p1)
                             (term-list p2)))
       (apply mul-poly (canonical p1 p2))))
+
+;; xy+yx =x(2y)
+(define p_1x (mk 'x '(0 1)))
+(define p_1y (mk 'y '(0 1)))
+(define p_x (mk 'x '(1 0)))
+(define p_y (mk 'y '(1 0)))
+(define p_xy (mul p_x p_y))
+(define p_yx (mul p_y p_x))
+
+(define p_x2y (add p_xy p_yx))
+(define p_y2x (add p_yx p_xy))
+
+(define p_x^2+1 (add (mul p_x p_x) p_1x))
+(define p_y^2+1 (add (mul p_y p_y) p_1y))
+
+(equal?
+ (mul p_x^2+1 p_y^2+1)
+ '(polynomial x sparse
+   (term 2 (polynomial y sparse
+             (term 2 (scheme-number . 1))
+             (term 0 (scheme-number . 1))))
+   (term 0 (polynomial y sparse
+             (term 2 (scheme-number . 1))
+             (term 0 (scheme-number . 1))))))
+
+;; (y+1)x^2+(y^2+1)x+(y-1)
+(define p3
+  (mk 'x 
+      (list
+       (mk 'y '(1 1))
+       (mk 'y '(1 0 1))
+       (mk 'y '(1 -1)))))
+;; (x-2)y+(x^2+7)
+(define p4
+  (mk 'y
+      (list
+       (mk 'x '(1 -2))
+       (mk 'x '(1 0 7)))))
+
+(define p5
+  (mk 'x
+      (list
+       (mk 'y (list (mk 'z '(3 0 0 -3)) 0 2)) 0)))
+
+(define p6
+  (mk 'z
+      (list
+       (mk 'x (list (mk 'y '(2 0 2)) 0 0)))))
+
+(equal?
+ (add p5 p6)
+ '(polynomial x sparse
+    (term 2 (polynomial z sparse
+              (term 0 (polynomial y sparse
+                        (term 2 (scheme-number . 2))
+                        (term 0 2)))))
+    (term 1 (polynomial y sparse
+              (term 2 (polynomial z sparse
+                        (term 3 3) (term 0 -3)))
+              (term 0 2)))))
+;; Extended exercise: Rational functions
