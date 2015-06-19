@@ -4,7 +4,7 @@
 
 ;; 2.2.3  Sequences as Conventional Interfaces
 
-(define (filter predicate sequence)
+(define (filter1 predicate sequence)
   (cond ((null? sequence) null)
         ((predicate (car sequence))
          (cons (car sequence)
@@ -133,7 +133,7 @@
                        (enumerate-interval 1 (- i 1))))
                 (enumerate-interval 1 n)))))
 
-(define (remove item sequence)
+(define (my-remove item sequence)
   (filter (lambda (x) (not (= x item)))
           sequence))
 
@@ -142,7 +142,7 @@
       (list null)                   ; sequence containing empty set
       (flatmap (lambda (x)
                  (map (lambda (p) (cons x p))
-                      (permutations (remove x s))))
+                      (permutations (my-remove x s))))
                s)))
 
 ;; Exercise 2.40.

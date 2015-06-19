@@ -461,11 +461,19 @@
 ;; polynomials works for polynomials in different variables. (This is
 ;; not easy!) 
 
+(define (expand p)
+   (let* ((tl (term-list p))  (ts (separate-terms tl))
+         (tl-type (type-tag tl)))
+    (map (lambda (t) (term->poly (variable p) tl-type t))
+         ts)))
 
 (define (expand-term t)
+  (prn 'expand-term) (prn t)
   (if (eq? (type-tag (coeff t)) 'polynomial)
-      (map (lambda (p) (make-term (order t) p))
-           (expand (coeff t)))
+      (let* ((ec (expand (coeff t)))
+             (f (lambda (p) (make-term (order t) p))))
+         (prn 'ec) (prn ec)
+        (map f ec))
       (list t)))
 
 (define (separate-terms term-list)
@@ -480,11 +488,6 @@
 (define (any->poly var term-type ord coeff)
   (term->poly var term-type (make-term ord coeff)))
 
-(define (expand p)
-   (let* ((tl (term-list p))  (ts (separate-terms tl))
-         (tl-type (type-tag tl)))
-    (map (lambda (t) (term->poly (variable p) tl-type t))
-         ts)))
 
 (define (polynomial? p)
   (eq? (type-tag p) 'polynomial))
@@ -609,4 +612,5 @@
               (term 2 (polynomial z sparse
                         (term 3 3) (term 0 -3)))
               (term 0 2)))))
+
 ;; Extended exercise: Rational functions
