@@ -3,7 +3,9 @@
 (load "sicp_2_4.rkt")
 
 (define (prn s) (write s) (newline))
-
+(define (assert msg pred)
+  (or (and pred (prn msg) (prn 'ok))
+      (error (string-join (list "error:" msg)))))
 ;; 2.5.1  Generic Arithmetic Operations
 
 (define (add x y) (apply-generic 'add x y))
@@ -28,15 +30,20 @@
 (define (make-scheme-number n)
   ((get 'make '(scheme-number)) n))
 
+
+(define (reduce-integers n d)
+  (let ((g (gcd n d)))
+    (cons (/ n g) (/ d g))))
+
+(define (make-rat n d)
+    (if (and (integer? n) (integer? d))
+        (reduce-integers n d)
+        (cons n d)))
+
 (define (install-rational-package)
   ;; internal procedures
   (define (numer x) (car x))
   (define (denom x) (cdr x))
-  (define (make-rat n d)
-    (if (and (integer? n) (integer? d))
-        (let ((g (gcd n d)))
-          (cons (/ n g) (/ d g)))
-        (cons n d)))
   (define (add-rat x y)
     (make-rat (+ (* (numer x) (denom y))
                  (* (numer y) (denom x)))
@@ -166,16 +173,16 @@
 
 (define (install-number-equality-package)
   (put 'equ? '(complex complex)
-       (lambda (i j) (and (= (real-part i) (real-part j))
-                     (= (imag-part i) (imag-part j)))))
+       (lambda (i j) (and (equ? (real-part i) (real-part j))
+                     (equ? (imag-part i) (imag-part j)))))
   (define (numer x) (car x))
   (define (denom x) (cdr x))
   (put 'equ? '(rational rational)
        (lambda (x y)
-         (if (= 0 (numer y))
-             (= 0 (numer x))
-             (= (/ (numer x) (numer y))
-                (/ (denom x) (denom y))))))
+         (if (equ? 0 (numer y))
+             (equ? 0 (numer x))
+             (equ? (div (numer x) (numer y))
+                   (div (denom x) (denom y))))))
   (put 'equ? '(scheme-number scheme-number) =)
   'done)
 
@@ -184,17 +191,17 @@
 
 ;; Exercise 2.80
 
-(define (=zero? x) (apply-generic '=zero? x))
-
 (define (install-zero-predicate-package)
   (put '=zero? '(complex)
-       (lambda (x) (= 0 (magnitude x))))
+       (lambda (x) (=zero? (magnitude x))))
   (define (numer x) (car x))
   (define (denom x) (cdr x))
   (put '=zero? '(rational)
-       (lambda (x) (= 0 (numer x))))
+       (lambda (x) (=zero? (numer x))))
   (put '=zero? '(scheme-number) (curry = 0))
   'done)
+
+(define (=zero? x) (apply-generic '=zero? x))
 
 (install-zero-predicate-package)
 
@@ -358,7 +365,9 @@
        (lambda (i) (make-rational i 1)))
   (put 'raise '(rational)
        (lambda (r) (make-real
-               (/ (car r) (cdr r) 1.0))))
+               (if (and (number? (cdr r))
+                        (number? (car r)))
+                   (/ (car r) (cdr r) 1.0) r))))
   (put 'raise '(real-number)
        (lambda (r) (make-complex-from-real-imag 
                r 0)))
@@ -405,20 +414,27 @@
 
 (install-numerical-tower)
 
-(add one one)
-;; (integer . 2)
-(add one (raise one))
-;; (rational 2 . 1)
-(add (raise (raise one)) one)
-;; (real-number . 2.0)
-(add (raise (raise (raise one))) one)
-;; (complex rectangular 2.0 . 0)
+(assert "testing add one one"
+        (equal? (add one one)
+                '(integer . 2)))
+(assert "testing raise to rational"
+        (equal? (add one (raise one))
+                '(rational 2 . 1)))
+
+(assert "testing raise to real"
+        (equal? (add (raise (raise one)) one)
+                '(real-number . 2.0)))
+(assert "testing raise to complex"
+        (equal? (add (raise (raise (raise one))) one)
+                '(complex rectangular 2.0 . 0)))
 
 ;; Exercise 2.85
-(equ? one one)
-;; #t
-(equ? one (raise one))
-;; #t
+(assert "testing equality"
+ (equ? one one))
+
+(assert "testing equality and raise"
+ (equ? one (raise one)))
+
 
 (define (install-project-package)
   (put 'project '(complex)          
@@ -430,12 +446,12 @@
                  (numerator ratio)
                  (denominator ratio)))))
   (put 'project '(rational)
-       (lambda (r) (make-integer
-               (let ((r (exact->inexact
-                         (/ (contents (car r))
-                            (contents (cdr r))))))
-                 (inexact->exact
-                  (floor r))))))
+       (lambda (r)
+         (let* ((num (contents (car r)))
+                (den (contents (cdr r))))
+         (if (and (number? num) (number? den))
+             (make-integer
+              (inexact->exact (floor (/ num den)))) r))))
   'done)
 
 (install-project-package)
@@ -443,31 +459,48 @@
 (define (project n)
   (apply-generic 'project n))
 
-(project (raise (raise (raise one))))
-;; (real-number . 1.0)
-(project (raise (raise one)))
-;; (rational 1 . 1)
-(project (raise one))
-;; (integer . 1)
+(assert "testing project from complex to real"
+        (equal?  (project (raise (raise (raise one))))
+                 '(real-number . 1.0)))
+(assert "testing project from real to rational"
+        (equal? (project (raise (raise one)))
+                '(rational 1 . 1)))
+(assert "testing project from rational to integer"
+        (equal? (project (raise one)) '(integer . 1)))
 
 (define (projectable type)
   (get 'project (list type)))
 
-(define (lower n)
+(define (raisable type)
+  (get 'raise (list type)))
+
+(define (lower n) 
   (if (and (pair? n)
            (projectable (type-tag n)))
-    (let ((res (project n)))
-      (if (equ? (raise res) n)
-          (lower res) n)) n))
+      (let ((res (project n)))
+        (if (and (raisable (type-tag res))
+                 (equ? (raise res) n))
+            (lower res) n)) n))
 
-(lower one) ;(integer . 1)
-(lower (raise one)) ;(integer . 1)
-(lower (make-rational 1 2)) ;(rational 1 . 2)
-(lower (raise (raise one))) ;(integer . 1)
-(lower (make-real 0.5)) ; (rational 1 . 2)
-(lower (make-complex-from-real-imag 1 0)) ; (integer . 1)
-(lower (make-complex-from-real-imag 1.5 0)) ; (rational 3 . 2)
-(lower (make-complex-from-real-imag 1 1)) ; (complex rectangular 1 . 1)
+(assert "testing lower from integer to integer"
+        (equal? (lower one) '(integer . 1)))
+(assert "testing lower.raise = id"
+        (equal? (lower (raise one)) '(integer . 1)))
+(assert "testing rationals that cant be lowered to int "
+        (equal? (lower (make-rational 1 2)) '(rational 1 . 2)))
+(assert "testing lower from real to integer"
+        (equal? (lower (raise (raise one))) '(integer . 1)))
+(assert "testing lower from real to rational"
+        (equal? (lower (make-real 0.5)) '(rational 1 . 2)))
+(assert "testing lower from complex to integer"
+        (equal?  (lower (make-complex-from-real-imag 1 0))
+                 '(integer . 1)))
+(assert "testing lower from complex to rational"
+        (equal? (lower (make-complex-from-real-imag 1.5 0))
+                '(rational 3 . 2)))
+(assert "testing complex numx that cant be lowered"
+        (equal? (lower (make-complex-from-real-imag 1 1))
+                '(complex rectangular 1 . 1)))
 
 (define (apply-generic op . args)
   (let* ((type-tags (map type-tag args))
@@ -484,8 +517,10 @@
 
 (define z1 (make-complex-from-real-imag 1 0))
 
-(add one (raise one)) ; (integer . 2)
-(add z1 z1)           ; (integer . 2)
+(assert "add integer and rational = integer"
+        (equal? (add one (raise one))  '(integer . 2)))
+(assert "add two complex number lower to  integer"
+        (equal? (add z1 z1)  '(integer . 2)))
 
 ;; Exercise 2.86
 
@@ -557,15 +592,22 @@
                         (contents n) 0))))
 
 (scheme-number-coercions)
-(add z-one z-one)
-;; (complex rectangular (integer . 2) integer . 2)
-(add z1 z1)
-;; (integer . 2)
-(sub z-one z-one)
-;; (integer . 0)
-(sub z-one z-two)
-;; (complex rectangular (integer . -1) integer . -1)
-;(add z-two z-three)
+
+(assert "testing adding two complex numbers"
+ (equal? (add z-one z-one)
+         '(complex rectangular
+                   (integer . 2) integer . 2)))
+(assert "testing add complex numbers lowered to integer"
+        (equal? (add z1 z1) '(integer . 2)))
+
+(assert "testing substract complex numbers lowered to integer"
+        (equal? (sub z-one z-one) '(integer . 0)))
+
+(assert "testing substract complex number"
+        (equal? (sub z-one z-two)
+                '(complex rectangular (integer . -1) integer . -1)))
+
+;; (add z-two z-three)
 ;; error cos: expects argument of type <number>; given (integer . 1)
 
 (define (install-trigonometric-package)
@@ -609,6 +651,7 @@
   (define default (compose sqrt contents))
   (put 'sqrt '(scheme-number) default)
   (put 'sqrt '(integer) default)
+  (put 'sqrt '(real-number) default)
   (put 'sqrt '(rational)
        (lambda (r) (/ (default (car r))
                  (default (cdr r))))))
@@ -657,24 +700,30 @@
 
 (install-polar-package-v2)
 
-(add z-two z-three)
-;;(complex rectangular
-;;         (rational 16651653194101815 . 4503599627370496)
-;;         rational 10456365435335067 . 2251799813685248)
+(assert "testing add complex numbers (2+2i)+(pi+3i)"
+        (equal? (add z-two z-three)
+                '(complex rectangular
+                         (rational 16651653194101815 . 4503599627370496)
+                         rational 10456365435335067 . 2251799813685248)))
 
-(sub z-three z-two)
-;;(complex rectangular
-;;         (rational -1362745315380169 . 4503599627370496)
-;;         rational 1449166180594075 . 2251799813685248)
-(mul z-three z-two)
-;;(complex polar
-;;         (rational 5632023223300212547393616123015 .
-;;                   633825300114114700748351602688)
-;;         rational
-;;         2010179625846179 . 1125899906842624)
-(div z-three z-two)
-;;(complex polar
-;;         (rational 884279719003555/2251799813685248 .
-;;                   281474976710656/6369051672525773)
-;;         rational
-;;         241620187839069 . 1125899906842624)
+(assert "testing substract complex numbers ((pi+3i)-(2+2i))"
+        (equal? (sub z-three z-two)
+                '(complex rectangular
+                          (rational -1362745315380169 . 4503599627370496)
+                          rational 1449166180594075 . 2251799813685248)))
+
+(assert "testing mult complex numbers (pi+3i)*(2+2i)"
+        (equal? (mul z-three z-two)
+                '(complex polar
+                          (rational 5632023223300212547393616123015 .
+                                   633825300114114700748351602688)
+                          rational
+                          2010179625846179 . 1125899906842624)))
+
+(assert "testing div complex numbers (pi+3i/2+2i)"
+        (equal? (div z-three z-two)
+                '(complex polar
+                          (rational 884279719003555/2251799813685248 .
+                                    281474976710656/6369051672525773)
+                          rational
+                          241620187839069 . 1125899906842624)))
