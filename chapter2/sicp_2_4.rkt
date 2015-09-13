@@ -1,4 +1,5 @@
 (load "sicp_2_3.rkt")
+
 ;; 2.4  Multiple Representations for Abstract Data
 
 ;; 2.4.1  Representations for Complex Numbers
@@ -169,7 +170,7 @@
          (rest-types-impls (remove type types-impls eqcar))
          (rest (remove op table eqcar))
          (new (cons (list type impl) rest-types-impls)))
-    (set! table (cons (cons op new) rest)) table))
+     (set! table (cons (cons op new) rest)) table))
 
 (define (get op type)
   (let* ((types-procs (assoc op table))
