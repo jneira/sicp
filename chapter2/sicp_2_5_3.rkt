@@ -137,10 +137,7 @@
 
 (assert "testing add polynomials"
  (equal? (add p1 p2)
-   '(polynomial
-     x
-     (3 1)
-     (2 3)
+   '(polynomial x (3 1) (2 3)
      (1 (complex rectangular
                  (scheme-number . 2.6666666666666665) scheme-number . 3))
      (0 (complex rectangular
@@ -148,42 +145,19 @@
 
 (assert "testing mult polynomials"
  (equal? (mul p1 p2)
-  '(polynomial
-    x
+  '(polynomial x
     (5 (scheme-number . 3))
-    (4
-     (complex
-      polar
-      (scheme-number . 3.605551275463989)
-      rational
-      8852218891597467
-      .
-      9007199254740992))
+    (4 (complex polar (scheme-number . 3.605551275463989)
+      rational 8852218891597467 . 9007199254740992))
     (3 (integer . 9))
-    (2
-     (complex
-      rectangular
-      (rational 2298712309803691.0 . 140737488355328.0)
-      rational
-      6192449487634433.0
-      .
-      562949953421312.0))
-    (1
-     (complex
-      rectangular
-      (rational 6380099472108203.0 . 1125899906842624.0)
-      rational
-      5910974510923777.0
-      .
-      281474976710656.0))
-    (0
-     (complex
-      polar
-      (scheme-number . 40.81666326391711)
-      rational
-      4867666120084705
-      .
-      9007199254740992)))))
+    (2 (complex rectangular
+          (rational 2298712309803691.0 . 140737488355328.0)
+          rational 6192449487634433.0 .  562949953421312.0))
+    (1 (complex rectangular
+         (rational 6380099472108203.0 . 1125899906842624.0)
+          rational 5910974510923777.0 .  281474976710656.0))
+    (0 (complex polar (scheme-number . 40.81666326391711)
+          rational 4867666120084705 . 9007199254740992)))))
 
 (define p22 (mk 'x '(2 2)))
 
@@ -192,23 +166,18 @@
 (put '=zero? '(polynomial) (compose null? cdr))
 
 (define p3
-  (mk 'x 
-      (list
-       (mk 'y '(1 1))
-       (mk 'y '(1 0 1))
-       (mk 'y '(1 -1)))))
+  (mk 'x (list (mk 'y '(1 1))
+               (mk 'y '(1 0 1))
+               (mk 'y '(1 -1)))))
 
 (define p4
-  (mk 'x 
-      (list
-       (mk 'y '(1 -2))
-       (mk 'y '(1 0 7)))))
+  (mk 'x (list (mk 'y '(1 -2))
+               (mk 'y '(1 0 7)))))
 
 (assert "testing add two polys with polynomil coeffs"
  (equal?
   (add p3 p4)
-  '(polynomial
-    x
+  '(polynomial x
     (2 (polynomial y (1 1) (0 1)))
     (1 (polynomial y (2 1) (1 1) (0 (scheme-number . -1))))
     (0 (polynomial y (2 1) (1 1) (0 (scheme-number . 6)))))))
@@ -216,27 +185,22 @@
 (assert "testing mult two polys with polynomials coeffs"
  (equal?
   (mul p3 p4)
-  '(polynomial
-    x
-    (3 (polynomial
-        y (2 (scheme-number . 1))
-        (1 (scheme-number . -1))
-        (0 (scheme-number . -2))))
-    (2 (polynomial
-        y (3 (scheme-number . 2))
-        (2 (scheme-number . -1))
-        (1 (scheme-number . 8))
-        (0 (scheme-number . 5))))
-    (1 (polynomial
-        y (4 (scheme-number . 1))
-        (2 (scheme-number . 9))
-        (1 (scheme-number . -3))
-        (0 (scheme-number . 9))))
-    (0 (polynomial
-        y (3 (scheme-number . 1))
-        (2 (scheme-number . -1))
-        (1 (scheme-number . 7))
-        (0 (scheme-number . -7)))))))
+  '(polynomial x
+    (3 (polynomial y (2 (scheme-number . 1))
+                   (1 (scheme-number . -1))
+                   (0 (scheme-number . -2))))
+    (2 (polynomial y (3 (scheme-number . 2))
+                   (2 (scheme-number . -1))
+                   (1 (scheme-number . 8))
+                   (0 (scheme-number . 5))))
+    (1 (polynomial y (4 (scheme-number . 1))
+                   (2 (scheme-number . 9))
+                   (1 (scheme-number . -3))
+                   (0 (scheme-number . 9))))
+    (0 (polynomial y (3 (scheme-number . 1))
+                   (2 (scheme-number . -1))
+                   (1 (scheme-number . 7))
+                   (0 (scheme-number . -7)))))))
 
 ;;Exercise 2.88.
 
@@ -273,7 +237,7 @@
       (make-poly (variable p1)
                  (add-terms (term-list p1)
                             (neg-terms (term-list p2))))
-      (error "Polys not in same var -- ADD-POLY"
+      (error "Polys not in same var -- SUB-POLY"
              (list p1 p2))))
 
 
@@ -283,14 +247,12 @@
 (assert "testing substract polys"
  (equal?
   (sub p3 p4)
-  '(polynomial
-    x
+  '(polynomial x
     (2 (polynomial y (1 1) (0 1)))
     (1 (polynomial y (2 1) (1 (scheme-number . -1))
-                   (0 (scheme-number . 3))))
+                           (0 (scheme-number . 3))))
     (0 (polynomial y (2 (scheme-number . -1)) (1 1)
-                   (0 (scheme-number . -8)))))))
-
+                     (0 (scheme-number . -8)))))))
 
 (assert "testing substract zero polys"
   (equal? (sub (make-polynomial 'x (make-sparse-term-list '(0 0)))
@@ -623,27 +585,21 @@
 
 ;; (y+1)x^2+(y^2+1)x+(y-1)
 (define p3
-  (mk 'x 
-      (list
-       (mk 'y '(1 1))
-       (mk 'y '(1 0 1))
-       (mk 'y '(1 -1)))))
+  (mk 'x (list (mk 'y '(1 1))
+               (mk 'y '(1 0 1))
+               (mk 'y '(1 -1)))))
 ;; (x-2)y+(x^2+7)
 (define p4
-  (mk 'y
-      (list
-       (mk 'x '(1 -2))
-       (mk 'x '(1 0 7)))))
+  (mk 'y (list (mk 'x '(1 -2))
+               (mk 'x '(1 0 7)))))
 
 (define p5
-  (mk 'x
-      (list
-       (mk 'y (list (mk 'z '(3 0 0 -3)) 0 2)) 0)))
+  (mk 'x (list
+    (mk 'y (list (mk 'z '(3 0 0 -3)) 0 2)) 0)))
 
 (define p6
-  (mk 'z
-      (list
-       (mk 'x (list (mk 'y '(2 0 2)) 0 0)))))
+  (mk 'z (list
+     (mk 'x (list (mk 'y '(2 0 2)) 0 0)))))
 
 (assert "testing add polys with diff vars"
  (equal?
@@ -721,20 +677,15 @@
 (assert "testing add rational functions"
  (equal?
   (add rf rf)
-  '(rational
-    (polynomial
-     x
-     sparse
-     (term 5 (scheme-number . 2))
-     (term 3 (scheme-number . 2))
-     (term 2 (scheme-number . 2))
-     (term 0 (scheme-number . 2)))
-    polynomial
-    x
-    sparse
-    (term 6 (scheme-number . 1))
-    (term 3 (scheme-number . 2))
-    (term 0 (scheme-number . 1)))))
+  '(rational (polynomial x sparse
+               (term 5 (scheme-number . 2))
+               (term 3 (scheme-number . 2))
+               (term 2 (scheme-number . 2))
+               (term 0 (scheme-number . 2)))
+             polynomial x sparse
+               (term 6 (scheme-number . 1))
+               (term 3 (scheme-number . 2))
+               (term 0 (scheme-number . 1)))))
 
 ;; Exercise 2.94
 
@@ -804,9 +755,7 @@
 
 (assert "testin gcd polys with common factors"
  (equal? gcd2-96
-         '(polynomial
-           x
-           sparse
+    '(polynomial x sparse
            (term 2 (scheme-number . 1458))
            (term 1 (scheme-number . -2916))
            (term 0 (scheme-number . 1458)))))
@@ -832,9 +781,7 @@
 
 (assert "testing gcd polys removing common factors"
   (equal? gcd2-96b
-          '(polynomial
-            x
-            sparse
+     '(polynomial x sparse
             (term 2 (scheme-number . 1))
             (term 1 (scheme-number . -2))
             (term 0 (scheme-number . 1)))))
