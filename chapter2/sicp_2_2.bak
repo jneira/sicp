@@ -1,5 +1,3 @@
-#lang scheme
-
 ;; 2  Building Abstractions with Data
 
 ;; 2.2  Hierarchical Data and the Closure Property
@@ -118,7 +116,7 @@
 
 (define (reverse sequence)
   (fold-right (lambda (x y)(append y (list x))) null sequence))
-(define (reversel sequence)
+(define (reverse sequence)
   (fold-left (lambda (x y) (cons y x)) null sequence))
 
 ;; Nested Mappings
@@ -156,7 +154,7 @@
           (enumerate-interval from (- i 1))))
    (enumerate-interval from to)))
 
-(define (prime-sum-pairs2 n)
+(define (prime-sum-pairs n)
   (map make-pair-sum
        (filter prime-sum?
                (unique-pairs 1 n))))
@@ -270,7 +268,7 @@
 (define up-split (split below beside))
 
 ;; Exercise 2.46.
-b
+
 (define make-vect list)
 (define xcor-vect car)
 (define ycor-vect cadr)
@@ -279,7 +277,7 @@ b
 (define sub-vect (curry map -))
 (define scale-vect (curry map (lambda (x) (* x s))))
 
-;; Exercise 2.47
+;; Exerecise 2.47
 
 (define (make-frame origin edge1 edge2)
   (list origin edge1 edge2))
