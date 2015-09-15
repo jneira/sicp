@@ -1,4 +1,4 @@
-;; #lang scheme
+#lang scheme
 ;; Section 3.1.1 Local State Variables
 
 (define (prn s) (write s) (newline))
@@ -139,17 +139,56 @@
   (* 0.000001 (estimate-integral
                unit-circle-pred -1000 1000 -1000 1000 trials)))
 
-(prn "Estimate pi:")
+(prn "3.5.- Estimating pi:")
 (prn (estimate-pi2 10000))
 
 ;; Exercise 3.6
 
-(define rand
-  (let 
-      (define r random-init)
-    (define (dispatch m)
-      (cond ((eq? m 'generate)
-             (lambda () (set! r (rand-update r)) r))
-            ((eq? m 'reset) (lambda (x) (set! r x) x))
-            (else (error "Unknown request -- RAND")))))
+(define (rand2 m)
+  (define r random-init)
+  (cond ((eq? m 'generate) (set! r (rand-update r)) r)
+        ((eq? m 'reset) (lambda (x) (set! r x) x))
+        (else (error "Unknown request -- RAND"))))
+
+(assert "3.6.- Testing rand with reset"
+        (let ((_ ((rand2 'reset) 0))
+              (fst (rand2 'generate))
+              (__ ((rand2 'reset) 0)))
+          (eq? (rand2 'generate) fst)))
+
+;; 3.1.3  The Costs of Introducing Assignment
+
+;; Exercise 3.7
+
+;; It's no neccesary to change origianal function writing a wrapper around it
+;; It has its own pitfalls though
+(define (make-joint acc origpass newpass)
+  (define (dispatch p m)
+    (cond ((not (eq? p newpass)) (lambda (x) "Incorrect password"))
+          ((eq? m 'withdraw) (acc origpass m))
+          ((eq? m 'deposit) (acc origpass m))
+          (else (error "Unknown request -- MAKE-JOINT"
+                       m))))
   dispatch)
+
+(assert "3.7.- Testing make-joint account"
+   (let* ((peter-acc (make-account 100 'open-sesame))
+          (paul-acc (make-joint peter-acc 'open-sesame 'rosebud))
+          (wrong (make-joint peter-acc 'wrong 'rosebud)))
+     (and (eq? ((peter-acc 'open-sesame 'withdraw) 10) 90)
+          (eq? ((paul-acc 'rosebud 'deposit) 10) 100)
+          (eq? ((peter-acc 'open-sesame 'withdraw) 0) 100)
+          (eq? ((paul-acc 'x 'withdraw) 10) "Incorrect password")
+          (eq? ((wrong 'rosebud 'withdraw) 10) "Incorrect password"))))
+
+;; Exercise 3.8
+
+(define f
+  (let ((zero? false))
+    (lambda (x) (if zero? 0
+                    (begin (set! zero? (= x 0)) x)))))
+
+(assert "3.8.- Testing broken substitution evaluation model"
+        (and (eq? (+ (f 1) (f 0)) 1)
+             (eq? (+ (f 0) (f 1)) 0)))
+      
