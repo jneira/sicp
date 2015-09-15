@@ -1,11 +1,14 @@
 #lang scheme
-;; Section 3.1.1 Local State Variables
 
 (define (prn s) (write s) (newline))
 
 (define (assert msg pred)
   (or (and pred (prn msg) (prn 'ok))
       (error (string-join (list "error:" msg)))))
+
+;; 3.1  Assignment and Local State
+
+;; Section 3.1.1 Local State Variables
 
 ;; Exercise 3.1
 
